@@ -1,0 +1,2277 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="公演情報・曲・歌詞・キューを入れると、AIに渡す台本作成の依頼書（.md）を書き出すツール">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>台本工房</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;800;900&family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: 左＝入力フォーム（番号つき5ブロック）／右＝書き出しパネル（sticky）。クラフト系・伝票のような機能的グラフィック */
+:root{
+  --paper:#f2efe9; --sheet:#fbfaf7; --ink:#141311; --sub:#6f6a62; --rule:#141311; --hair:#cfc8bb;
+  --kraft:#b8935f; --kraft-soft:#e7dcc9; --warn:#b5481f; --ok:#3d6b45; --field:#ffffff;
+  --d-pa:#c9d6e2; --d-vj:#d8cde4; --d-l:#ecd6a6; --d-st:#cddcc8;
+  --display:"Archivo","Noto Sans JP",system-ui,sans-serif;
+  --body:"Noto Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#171613; --sheet:#1f1d1a; --ink:#ece7dd; --sub:#a39c90; --rule:#ece7dd; --hair:#3a3631;
+  --kraft:#c9a876; --kraft-soft:#3a3124; --warn:#e58a62; --ok:#8cc596; --field:#141310; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#171613; --sheet:#1f1d1a; --ink:#ece7dd; --sub:#a39c90; --rule:#ece7dd; --hair:#3a3631;
+  --kraft:#c9a876; --kraft-soft:#3a3124; --warn:#e58a62; --ok:#8cc596; --field:#141310; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6;margin:0}
+.wrap{max-width:1360px;margin:0 auto;padding-inline:clamp(16px,3vw,40px);padding-block:0 64px;position:relative}
+
+/* ---------- ヘッダー ---------- */
+header.mast{display:grid;grid-template-columns:1fr auto;gap:12px 24px;align-items:end;border-bottom:2px solid var(--rule);padding-block:28px 14px;position:relative;overflow:hidden}
+.mast h1{font-family:var(--body);font-weight:900;font-size:clamp(56px,11vw,140px);line-height:.95;letter-spacing:.02em;margin:0;text-transform:uppercase}
+.mast h1 span{color:var(--kraft)}
+.mast .lede{grid-column:1/-1;margin-top:14px;display:flex;flex-wrap:wrap;gap:8px 28px;align-items:baseline;justify-content:space-between}
+.mast .lede p{margin:0;font-size:15px;max-width:60ch}
+.tag{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub)}
+.code{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.barcode{width:180px;height:42px;background:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 4px,var(--ink) 4px 5px,transparent 5px 8px,var(--ink) 8px 11px,transparent 11px 12px,var(--ink) 12px 13px,transparent 13px 16px)}
+.specline{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--sub);letter-spacing:.06em}
+
+/* ---------- 本体 ---------- */
+.main{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:32px;margin-top:28px;align-items:start}
+@media (max-width:980px){.main{grid-template-columns:minmax(0,1fr)}}
+
+section.block{border-top:2px solid var(--rule);padding-block:14px 26px;display:grid;grid-template-columns:72px minmax(0,1fr);gap:0 18px}
+@media (max-width:560px){section.block{grid-template-columns:minmax(0,1fr)}}
+.num{font-family:var(--display);font-weight:900;font-size:56px;line-height:.9;letter-spacing:-.04em;color:var(--kraft)}
+.bhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 16px;margin-bottom:14px}
+.bhead h2{font-size:20px;font-weight:900;margin:0;letter-spacing:.02em}
+.bhead .tag{white-space:nowrap}
+.hint{font-size:12.5px;color:var(--sub);margin:-6px 0 12px}
+
+.grid{display:grid;gap:12px 14px;grid-template-columns:repeat(6,minmax(0,1fr))}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f.s2{grid-column:span 2}.f.s3{grid-column:span 3}.f.s4{grid-column:span 4}.f.s6{grid-column:span 6}
+@media (max-width:640px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.f.s2,.f.s3{grid-column:span 1}.f.s4,.f.s6{grid-column:span 2}}
+label,.lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub)}
+label b{font-family:var(--body);font-weight:700;letter-spacing:.04em;color:var(--ink);text-transform:none;font-size:12px;margin-right:6px}
+input[type=text],input[type=time],textarea,select{width:100%;font:inherit;font-size:15px;color:var(--ink);background:var(--field);border:1.5px solid var(--hair);border-radius:2px;padding:8px 10px;min-width:0}
+textarea{resize:vertical;min-height:84px;line-height:1.65}
+input:focus,textarea:focus,select:focus,button:focus-visible{outline:2px solid var(--kraft);outline-offset:1px;border-color:var(--ink)}
+.mono{font-family:var(--mono)}
+
+/* 行リスト（キャスト・楽曲・セットリスト） */
+.rows{display:flex;flex-direction:column;border:1.5px solid var(--rule);background:var(--sheet)}
+.rowh,.row{display:grid;gap:8px;align-items:center;padding:8px 10px}
+.rowh{border-bottom:1.5px solid var(--rule);font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);padding-block:6px}
+.row+.row{border-top:1px solid var(--hair)}
+.row input[type=text]{padding:6px 8px;font-size:14px}
+.cast .rowh,.cast .row{grid-template-columns:44px minmax(0,1fr) minmax(0,1.2fr) minmax(0,1.2fr) 30px}
+.set .rowh,.set .row{grid-template-columns:54px minmax(0,.8fr) minmax(0,1.4fr) 64px 58px 58px}
+.song .rowh,.song .row{grid-template-columns:44px minmax(0,1.6fr) 72px minmax(0,1fr) 30px}
+@media (max-width:640px){
+  .cast .row{grid-template-columns:40px minmax(0,1fr) 30px}.cast .row .opt{grid-column:2/3}
+  .cast .rowh{display:none}
+  .set .row{grid-template-columns:50px minmax(0,1fr) 64px}.set .row .sub{grid-column:2/4}.set .rowh{display:none}.set .row .cuebtn{grid-column:1/2}
+  .set .row .ctrl{grid-column:1/-1;justify-content:flex-end}
+  .song .rowh{display:none}.song .row{grid-template-columns:40px minmax(0,1fr) 64px}.song .row .opt{grid-column:2/3}
+}
+.swatch{position:relative;width:36px;height:30px;border:1.5px solid var(--rule);border-radius:2px;overflow:hidden}
+.swatch input{position:absolute;inset:-6px;width:calc(100% + 12px);height:calc(100% + 12px);border:0;padding:0;cursor:pointer;background:none}
+.clock{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;font-weight:600}
+.clock.song{background:var(--kraft-soft);padding:2px 4px}
+.sid{font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:-.02em}
+.ctrl{display:flex;gap:2px}
+.x{appearance:none;border:1.5px solid transparent;background:none;color:var(--sub);width:28px;height:28px;border-radius:2px;cursor:pointer;font:600 14px var(--mono);display:grid;place-items:center}
+.x:hover{border-color:var(--rule);color:var(--ink)}
+.add{appearance:none;border:0;border-top:1.5px dashed var(--hair);background:none;color:var(--ink);font:600 12px var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:10px;cursor:pointer;text-align:left}
+.add:hover{background:var(--ink);color:var(--paper)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{appearance:none;border:1.5px solid var(--hair);background:none;color:var(--sub);font:500 12px var(--body);padding:2px 8px;border-radius:2px;cursor:pointer;display:inline-flex;gap:5px;align-items:center}
+.chip i{width:8px;height:8px;display:inline-block}
+.chip[aria-pressed="true"]{border-color:var(--rule);color:var(--ink);font-weight:700;background:var(--sheet)}
+.lyr{grid-column:1/-1}
+.lyr textarea{min-height:120px;font-size:14px}
+details.lyr summary{cursor:pointer;font-size:12.5px;color:var(--sub);list-style:none;display:flex;gap:8px;align-items:center}
+details.lyr summary::before{content:"＋";font-family:var(--mono);color:var(--ink)}
+details.lyr[open] summary::before{content:"－"}
+.pill{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;padding:1px 6px;border:1px solid currentColor;border-radius:2px}
+.pill.ok{color:var(--ok)}.pill.no{color:var(--warn)}
+.total{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;border-top:1.5px solid var(--rule);padding:10px;background:var(--sheet);font-variant-numeric:tabular-nums}
+.total strong{font-family:var(--display);font-weight:900;font-size:30px;letter-spacing:-.02em}
+
+/* ---------- 書き出しパネル ---------- */
+aside.out{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);border:2px solid var(--rule);background:var(--sheet);display:flex;flex-direction:column;max-height:calc(100vh - 32px);min-width:0}
+@media (max-width:980px){aside.out{position:static;max-height:none}.preview{max-height:70vh}}
+@media (max-width:640px){header.mast{grid-template-columns:minmax(0,1fr)}.code{align-items:flex-start}.barcode{width:140px;height:28px}}
+.outh{padding:14px 16px 12px;border-bottom:2px solid var(--rule);display:grid;gap:10px}
+.outh .t{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.outh h2{font-family:var(--display);font-weight:900;font-size:26px;letter-spacing:-.02em;margin:0;text-transform:uppercase}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{appearance:none;border:2px solid var(--rule);background:var(--ink);color:var(--paper);font:700 14px var(--body);padding:9px 16px;border-radius:2px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{background:var(--paper);color:var(--ink)}
+.btn.ghost{background:none;color:var(--ink)}
+.btn.ghost:hover{background:var(--ink);color:var(--paper)}
+.btn[hidden]{display:none}
+.mode{display:flex;border:1.5px solid var(--rule);width:max-content;max-width:100%}
+.mode button{appearance:none;border:0;background:none;color:var(--ink);font:600 12px var(--body);padding:6px 12px;cursor:pointer}
+.mode button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.status{font-size:12.5px;color:var(--sub);min-height:1.2em}
+.checks{padding:10px 16px;border-bottom:1.5px solid var(--hair);display:flex;flex-direction:column;gap:4px;font-size:13px}
+.checks .c{display:flex;gap:8px;align-items:flex-start}
+.checks .c::before{content:"!";font:700 11px var(--mono);color:var(--paper);background:var(--warn);width:16px;height:16px;flex:none;display:grid;place-items:center;margin-top:2px;border-radius:2px}
+.checks .c.good::before{content:"✓";background:var(--ok)}
+.preview{overflow:auto;padding:14px 16px;flex:1;min-height:240px}
+.preview pre{margin:0;font-family:var(--mono);font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-word;color:var(--ink)}
+.preview .specnote{font-family:var(--mono);font-size:11px;color:var(--sub);border:1.5px dashed var(--hair);padding:8px 10px;margin-bottom:12px}
+.outf{display:flex;justify-content:space-between;gap:10px;padding:8px 16px;border-top:1.5px solid var(--hair);font-family:var(--mono);font-size:10.5px;color:var(--sub);letter-spacing:.08em}
+
+/* 端の縦レール */
+.rail{position:absolute;right:4px;top:200px;writing-mode:vertical-rl;font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--sub);text-transform:uppercase}
+@media (max-width:1400px){.rail{display:none}}
+footer.colo{margin-top:40px;border-top:2px solid var(--rule);padding-top:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-family:var(--mono);font-size:10.5px;color:var(--sub);letter-spacing:.1em}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
+/* キュー（部署別） */
+.cuebtn{appearance:none;border:1.5px solid var(--hair);background:none;color:var(--sub);font:600 11px var(--mono);letter-spacing:.06em;height:28px;padding:0 6px;border-radius:2px;cursor:pointer;white-space:nowrap}
+.cuebtn:hover,.cuebtn[aria-expanded="true"]{border-color:var(--rule);color:var(--ink)}
+.cuebtn.has{border-color:var(--rule);color:var(--ink);background:var(--kraft-soft)}
+.cuebox{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:4px 0 6px}
+@media (max-width:640px){.cuebox{grid-template-columns:minmax(0,1fr)}}
+.cuef{display:flex;flex-direction:column;gap:3px;min-width:0}
+.cuef textarea{min-height:58px;font-size:13.5px;padding:6px 8px;border-left-width:6px}
+.cuef.PA textarea{border-left-color:var(--d-pa)}.cuef.VJ textarea{border-left-color:var(--d-vj)}
+.cuef.L textarea{border-left-color:var(--d-l)}.cuef.ST textarea{border-left-color:var(--d-st)}
+.dtag{font:700 10px var(--mono);letter-spacing:.08em;padding:1px 5px;border-radius:2px;color:#141311}
+.dtag.PA{background:var(--d-pa)}.dtag.VJ{background:var(--d-vj)}.dtag.L{background:var(--d-l)}.dtag.ST{background:var(--d-st)}
+.colsel{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+/* ライブラリ */
+.lib{border:1.5px solid var(--rule);background:var(--sheet)}
+.libstat{display:flex;flex-wrap:wrap;gap:0;border-bottom:1.5px solid var(--rule)}
+.libstat div{flex:1 1 90px;padding:10px 12px;border-right:1px solid var(--hair);min-width:0}
+.libstat div:last-child{border-right:0}
+.libstat strong{display:block;font-family:var(--display);font-weight:900;font-size:30px;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.libbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0}
+@media (max-width:640px){.libbar{grid-template-columns:minmax(0,1fr)}}
+.libbar .cell{padding:12px;border-bottom:1px solid var(--hair);display:flex;flex-direction:column;gap:6px;min-width:0}
+.libbar .cell:nth-child(odd){border-right:1px solid var(--hair)}
+@media (max-width:640px){.libbar .cell:nth-child(odd){border-right:0}}
+.inl{display:flex;gap:6px;min-width:0}
+.inl input,.inl select{flex:1;min-width:0;padding:6px 8px;font-size:14px}
+.sbtn{appearance:none;border:1.5px solid var(--rule);background:var(--ink);color:var(--paper);font:700 13px var(--body);padding:6px 12px;border-radius:2px;cursor:pointer;white-space:nowrap}
+.sbtn:hover{background:var(--paper);color:var(--ink)}
+.sbtn.ghost{background:none;color:var(--ink)}.sbtn.ghost:hover{background:var(--ink);color:var(--paper)}
+.sbtn:disabled{opacity:.4;cursor:default}
+.libact{display:flex;flex-wrap:wrap;gap:8px;padding:12px}
+.libpanel{padding:12px;border-top:1.5px solid var(--rule);display:flex;flex-direction:column;gap:8px}
+.libpanel textarea{min-height:120px;font-family:var(--mono);font-size:12px}
+.liblist{max-height:220px;overflow:auto;border-top:1.5px solid var(--rule)}
+.liblist .li{display:grid;grid-template-columns:minmax(0,1fr) 56px minmax(0,.7fr) 64px 28px;gap:8px;align-items:center;padding:5px 12px;font-size:13px}
+.liblist .li+.li{border-top:1px solid var(--hair)}
+.liblist .li .m{font-family:var(--mono);font-size:11.5px;color:var(--sub);font-variant-numeric:tabular-nums}
+.liblist .empty{padding:12px;color:var(--sub);font-size:13px}
+.libmsg{font-size:12.5px;color:var(--sub);padding:0 12px 10px;min-height:1em}
+.badge{font:700 9.5px var(--mono);letter-spacing:.1em;background:var(--kraft);color:#141311;padding:1px 4px;border-radius:2px;margin-top:2px;display:inline-block}
+.sidw{display:flex;flex-direction:column;align-items:flex-start}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="rail">台本工房 · CUE SHEET · PROMPTER · ISUMI</div>
+  <header class="mast">
+    <h1>台本<br><span>工房</span></h1>
+    <div class="code">
+      <div class="barcode" aria-hidden="true"></div>
+      <div class="tag">DAIHON KOBO / DK-MD-2026 / 16:9 / A4L</div>
+    </div>
+    <div class="lede">
+      <p>公演の情報を入れると、AIに渡す依頼書（.md）が仕様書つきでできあがります。曲やキャストはライブラリに登録しておけば、次からは選ぶだけです。</p>
+      <div class="specline"><span>OUTPUT : .MD</span><span>→ AI → .DOCX / .PPTX</span><span id="savedAt">DRAFT : —</span></div>
+    </div>
+  </header>
+
+  <div class="main">
+    <form id="form" autocomplete="off" onsubmit="return false">
+      <!-- 00 ライブラリ -->
+      <section class="block">
+        <div class="num">00</div>
+        <div>
+          <div class="bhead"><h2>ライブラリ</h2><span class="tag">Library / 曲・キャストの保存</span></div>
+          <p class="hint">一度登録した曲・キャストは、名前を選ぶだけで尺・歌唱・歌詞が入ります。書き出した <span class="mono">daihon_library.md</span> をAIのプロジェクトに入れておくと、依頼書から歌詞を省けます。</p>
+          <div class="lib">
+            <div class="libstat">
+              <div><span class="tag">Songs</span><strong id="lsSongs">0</strong></div>
+              <div><span class="tag">Groups</span><strong id="lsGroups">0</strong></div>
+              <div><span class="tag">Rules</span><strong id="lsRules">0</strong></div>
+              <div><span class="tag">Updated</span><strong id="lsDate" style="font-size:18px;padding-top:8px">—</strong></div>
+            </div>
+            <div class="libbar">
+              <div class="cell"><label for="grpSel"><b>キャストを呼び出す</b>Group</label>
+                <div class="inl"><select id="grpSel"></select><button type="button" class="sbtn" id="grpLoad">呼び出す</button></div></div>
+              <div class="cell"><label for="libSongIn"><b>曲を追加</b>セトリの最後にも入ります</label>
+                <div class="inl"><input type="text" id="libSongIn" list="libSongs" placeholder="曲名を入力・選択"><button type="button" class="sbtn" id="libSongAdd">追加</button></div></div>
+            </div>
+            <div class="libact">
+              <button type="button" class="sbtn" id="libReg">今の入力をライブラリに登録</button>
+              <button type="button" class="sbtn ghost" id="libExport">ライブラリを書き出す</button>
+              <button type="button" class="sbtn ghost" id="libImportOpen">読み込み・AIの更新データを取り込む</button>
+              <button type="button" class="sbtn ghost" id="libListToggle" aria-expanded="false">登録済みの曲を見る</button>
+            </div>
+            <div class="libmsg" id="libMsg" role="status"></div>
+            <div class="libpanel" id="regPanel" hidden>
+              <label for="regName"><b>グループ名</b>キャストセットの名前（同名は上書き）</label>
+              <div class="inl"><input type="text" id="regName"><button type="button" class="sbtn" id="regDo">登録する</button><button type="button" class="sbtn ghost" id="regCancel">やめる</button></div>
+              <span class="hint" style="margin:0">今のキャストと、曲名が入っているすべての曲（尺・歌唱・歌詞・クレジット）を登録します。</span>
+            </div>
+            <div class="libpanel" id="impPanel" hidden>
+              <label for="impText"><b>貼り付け</b>daihon_library.md の全文、またはAIが出した更新データ（JSON）</label>
+              <textarea id="impText" spellcheck="false"></textarea>
+              <div class="inl" style="flex-wrap:wrap">
+                <button type="button" class="sbtn" id="impDo">取り込む</button>
+                <label class="sbtn ghost" for="impFile" style="font:700 13px var(--body);letter-spacing:0;text-transform:none;color:var(--ink)">ファイルから読む</label>
+                <input type="file" id="impFile" accept=".md,.json,.txt" hidden>
+                <button type="button" class="sbtn ghost" id="impCancel">閉じる</button>
+              </div>
+            </div>
+            <div class="libpanel" id="expPanel" hidden>
+              <span class="hint" style="margin:0">このファイルをAIのプロジェクト（ファイル・ナレッジ）に入れてください。</span>
+              <div class="inl" style="flex-wrap:wrap">
+                <button type="button" class="sbtn" id="expCopy">コピー</button>
+                <button type="button" class="sbtn ghost" id="expSave" hidden>daihon_library.md で保存</button>
+                <button type="button" class="sbtn ghost" id="expClose">閉じる</button>
+              </div>
+            </div>
+            <div class="liblist" id="libList" hidden></div>
+          </div>
+          <datalist id="libSongs"></datalist>
+        </div>
+      </section>
+
+      <!-- 01 公演情報 -->
+      <section class="block">
+        <div class="num">01</div>
+        <div>
+          <div class="bhead"><h2>公演情報・趣旨</h2><span class="tag">Event / Purpose</span></div>
+          <div class="grid">
+            <div class="f s4"><label for="title"><b>公演名</b>Title</label><input type="text" id="title"></div>
+            <div class="f s2"><label for="version"><b>版</b>Ver.</label><input type="text" id="version"></div>
+            <div class="f s6"><label for="subtitle"><b>サブタイトル</b>任意</label><input type="text" id="subtitle"></div>
+            <div class="f s3"><label for="date"><b>日時</b>Date</label><input type="text" id="date" placeholder="2026年11月3日（火・祝）"></div>
+            <div class="f s3"><label for="venue"><b>会場</b>Venue</label><input type="text" id="venue"></div>
+            <div class="f s3"><label for="open"><b>開場</b>Open</label><input type="text" id="open" class="mono" placeholder="17:30" inputmode="numeric"></div>
+            <div class="f s3"><label for="start"><b>開演</b>Start</label><input type="text" id="start" class="mono" placeholder="18:00" inputmode="numeric"></div>
+            <div class="f s6"><label for="purpose"><b>趣旨</b>この公演で伝えたいこと・ゴール</label><textarea id="purpose"></textarea></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 02 キャスト -->
+      <section class="block">
+        <div class="num">02</div>
+        <div>
+          <div class="bhead"><h2>キャスト・色分け</h2><span class="tag">Cast / Color</span></div>
+          <p class="hint">「表記」は台本とプロンプターに出る名前です。色は台本の名前の背景と、プロンプターの歌詞の色になります。</p>
+          <div class="rows cast" id="castRows"></div>
+        </div>
+      </section>
+
+      <!-- 03 楽曲・歌詞 -->
+      <section class="block">
+        <div class="num">03</div>
+        <div>
+          <div class="bhead"><h2>楽曲・時間・歌詞</h2><span class="tag">Songs / Lyrics</span></div>
+          <p class="hint">歌詞は1行ずつ、行の頭に「名前：」でパートを書きます。[1番サビ] のように見出しを入れると、プロンプターがその単位でページ分けされます。</p>
+          <div class="rows song" id="songRows"></div>
+        </div>
+      </section>
+
+      <!-- 04 セットリスト -->
+      <section class="block">
+        <div class="num">04</div>
+        <div>
+          <div class="bhead"><h2>セットリスト・時間</h2><span class="tag">Running order</span></div>
+          <p class="hint">区分に「M1」など曲番号を入れると、曲の尺が自動で入ります。開始時刻は開演から自動計算されます。<b>CUE</b> を押すと、その行の PA・VJ・照明・舞台への指示を書けます（1行に1指示。「〜で」ときっかけを先に書くと、きっかけ欄に分けて入ります）。</p>
+          <div class="rows set" id="setRows"></div>
+        </div>
+      </section>
+
+      <!-- 05 MC・演出・備考 -->
+      <section class="block">
+        <div class="num">05</div>
+        <div>
+          <div class="bhead"><h2>MC・演出・備考</h2><span class="tag">MC / Cue / Notes</span></div>
+          <div class="grid">
+            <div class="f s6"><label for="mc"><b>MCで話す内容・入れたい要素</b>自己紹介・告知・トークテーマ</label><textarea id="mc"></textarea></div>
+            <div class="f s6"><label for="cues"><b>全体の演出メモ</b>行ごとのキューは04のCUEへ</label><textarea id="cues"></textarea></div>
+            <div class="f s6"><span class="lab"><b style="font-family:var(--body);font-size:12px;letter-spacing:.04em;color:var(--ink);text-transform:none;margin-right:6px">台本に独立した欄を作る部署</b>3つまで</span><div class="colsel" id="colSel"></div></div>
+            <div class="f s6"><label for="notes"><b>備考</b>1行に1項目（NG表現・カット候補・キャラ口調など）</label><textarea id="notes"></textarea></div>
+          </div>
+        </div>
+      </section>
+    </form>
+
+    <aside class="out" aria-label="書き出し">
+      <div class="outh">
+        <div class="t"><h2>Export .md</h2><span class="tag" id="sizeTag">—</span></div>
+        <div class="mode" role="group" aria-label="書き出す内容">
+          <button type="button" id="modeFull" aria-pressed="true">仕様書＋公演データ</button>
+          <button type="button" id="modeData" aria-pressed="false">公演データのみ</button>
+        </div>
+        <div class="mode" role="group" aria-label="登録済みの曲の歌詞" id="lyrModeWrap" hidden>
+          <button type="button" id="lyrRef" aria-pressed="true">登録曲の歌詞はライブラリ参照</button>
+          <button type="button" id="lyrFull" aria-pressed="false">歌詞を全文入れる</button>
+        </div>
+        <div class="btns">
+          <button type="button" class="btn" id="copyBtn">コピー</button>
+          <button type="button" class="btn ghost" id="saveBtn" hidden>.mdで保存</button>
+        </div>
+        <div class="status" id="status" role="status"></div>
+      </div>
+      <div class="checks" id="checks"></div>
+      <div class="preview" id="preview"></div>
+      <div class="outf"><span id="foot1">—</span><span>
+        <button type="button" class="x" style="width:auto;padding:0 6px" id="sampleBtn">見本を読み込む</button>
+        <button type="button" class="x" style="width:auto;padding:0 6px" id="clearBtn">すべて消す</button>
+      </span></div>
+      <div class="outf confirm" id="confirmBar" hidden>
+        <span>入力をすべて消します。よろしいですか？</span>
+        <span class="btns"><button type="button" class="btn" id="clearYes">消す</button><button type="button" class="btn ghost" id="clearNo">やめる</button></span>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="colo">
+    <span>© ISUMI · 台本工房</span><span>入力内容はこのブラウザにだけ下書き保存されます</span><span>SPEC v1.0</span>
+  </footer>
+</div>
+
+<script type="text/plain" id="spec">
+# 台本・プロンプター作成仕様書（台本工房）
+
+> **このファイルの使い方（人間向け）**
+> 1. このmdファイルを、使っているAI（Claude／ChatGPT／Geminiなど）にまるごと渡す
+> 2. 「## 1. 入力テンプレート」をコピーして埋め、同じチャットに貼る
+> 3. AIが出す「台本ドラフト」を確認 → OKを出すと、Word台本とPPTXプロンプターが書き出される
+>
+> **2回目からは手数が減ります**：曲名・尺・歌詞・キャストは「ライブラリ」（9章）としてAIに保存しておけば、
+> 次からは「セトリ：はじまりの合図 → MC1 4分 → …」のように**曲名と今回だけの内容を書くだけ**で作れます。
+>
+> 公演・配信・イベントなど、セットリストのある企画ならどれにでも使えます。
+
+---
+
+## 0. AIへの指示（最初に読むこと）
+
+あなたは、ライブ・イベントの**進行台本作家**であり、**舞台監督の補佐**です。
+ユーザーから受け取った情報をもとに、次の2つを作ってください。
+
+| 成果物 | 形式 | 使う人・場面 |
+|---|---|---|
+| 進行台本 | Word（.docx） | スタッフ・演者が事前に読む、本番中にスタッフが追う |
+| プロンプター | PowerPoint（.pptx） | 本番中、ステージ足元モニターに映して演者が読む |
+
+**守ること**
+
+- この仕様書のルール（2〜5章）を優先する。ユーザーの指示と食い違う場合はユーザーの指示に従う
+- 入力にないこと（曲名、歌詞、時間、キャスト名）を**勝手に作らない**。足りなければ質問する
+- 歌詞は**ユーザーが渡したもの、またはライブラリ（9章）に保存されたものだけ**を使う。書き換え・要約・補完をしない
+- **ライブラリ（9章）があれば必ず先に参照**し、そこにある情報はユーザーに聞き直さない
+- 出力ファイルは「6. 中間データ」→「7. 書き出し」の手順で作る。デザインは自己流にアレンジしない
+
+---
+
+## 1. 入力テンプレート（ユーザーが埋めて貼る）
+
+```
+【公演名】
+【サブタイトル】（任意）
+【日時】　　　　　【会場】
+【開場／開演】　　／
+【趣旨】（この公演で伝えたいこと・ゴール）
+
+【キャスト・色分け】（表記名／本名や演者名／所属／カラー）
+例）ひかり／春野ひかり／ソラノート リーダー／オレンジ
+例）みお／青井みお／ソラノート／#3A7BD5
+
+【セットリスト・時間】（順番・区分・尺）
+例）影アナ 2分 → OP SE 1分 → M1 → MC1 4分 → M2 → MC2 3分 → M3 → ED 1分30秒
+
+【楽曲・時間】（曲番号／曲名／尺／歌唱メンバー／クレジット）
+例）M1／はじまりの合図／4:10／全員
+例）M2／ソーダ色の午後／3:50／みお・つむぎ
+
+【歌詞】（曲ごと。パート割りがあれば行頭に名前を書く）
+例）
+■M1 はじまりの合図
+[1番Aメロ]
+ひかり：目覚ましより早く　胸が鳴った朝
+みお：カーテンの向こうで　空が手を振る
+[1番サビ]
+全員：さあ 合図を鳴らそう
+…
+
+【MCで話す内容・入れたい要素】（自己紹介、告知、トークテーマなど）
+【キッカケ・演出】（わかる範囲で。部署ごとに書く。「どこで」→「何を」）
+　PA（音響）：例）OP：SE「Overture」CI／M2頭：ひかりのマイクOFF
+　VJ（映像）：例）OP：OPムービー再生／MC2「出演が決まりました！」で告知画像
+　照明　　　：例）MC1「2人で歌います。」で暗転／M3ラストサビで客席照らし
+　舞台　　　：例）MC1暗転中にひかり上手ハケ
+【台本に独立した欄を作る部署】照明（ほかに PA・VJ も選べる）
+【備考】（NG表現、押した時のカット候補、キャラ口調、注意点など）
+```
+
+**任意で渡せると精度が上がるもの**：キャラクターの口調設定、過去の台本、会場の制約（袖マイクの有無など）
+
+### 1-2. 短縮入力（ライブラリがある場合）
+
+ライブラリ（9章）に登録済みの曲・キャストは、名前だけ書けばよい。
+
+```
+【公演名】　　　　【日時・会場】
+【開演】18:00
+【キャスト】ソラノート（ライブラリのグループ名）
+【セトリ】影アナ 2分 → OP 1分 → はじまりの合図 → MC1 4分 → ソーダ色の午後 → MC2 3分 → まっすぐな約束 → ED 1分30秒
+【今回だけの内容】（趣旨、MCの話題、告知、演出、備考など）
+```
+
+- 曲名だけ書かれた行は**楽曲**として扱い、尺・歌唱メンバー・歌詞・クレジットをライブラリから引用する
+- 今回だけ変える点（尺が違う、歌唱メンバーが違う、ショートVer.など）は、その曲のあとに（ ）で書く
+  例）はじまりの合図（ショートVer. 2:30／1番のみ）
+
+---
+
+## 2. 作業手順（AIが行う）
+
+0. **ライブラリを読む**（9章）：プロジェクトのファイル・ナレッジ・メモリーに `daihon_library` があれば読み込み、入力の曲名・グループ名と照らし合わせる
+1. **入力チェック**：不足・矛盾（尺の合計、歌唱メンバーの未登録、歌詞がない曲など）を確認。ライブラリで埋まる項目は聞かない。質問は**1回にまとめて**行う
+2. **台本ドラフトを提示**：チャット上に、台本と同じ列（時間／セットリスト／内容／部署欄）の表で全体を見せる。合計時間と終演予定時刻を添える。ライブラリから引用した項目は「ライブラリから引用：曲名（尺・歌詞）」と一覧で示す
+3. **ユーザーの確認・修正**を反映
+4. **プロンプター原稿を作成**（5章の改行ルールに従う）
+5. **中間データ（JSON）を作成**（6章）
+6. **WordとPPTXを書き出す**（7章）
+7. **最終チェック**（8章）を行い、結果を短く報告
+8. **ライブラリを更新**（9章）：新しい曲・変わった尺やパートがあれば、更新データを出して保存を促す
+
+---
+
+## 3. 台本の書き方ルール
+
+### 3-1. 構成
+- 台本は「時間」「セットリスト」「内容」の3カラム＋**部署欄**（初期値は「照明」。PA・VJ も追加できる）
+- 1行＝セットリスト上の1ブロック（影アナ、OP、M1、MC1…）
+- 「時間」は開始時刻（例 18:07）と尺（例 4:00）。開始時刻は**開演時刻＋尺の積み上げ**で計算する
+- 楽曲ブロックは**黄色**、キャストはそれぞれの**キャストカラー**で名前に色を付ける（書き出しスクリプトが自動で行う）
+
+### 3-2. 内容欄に入れる要素（6種類）
+
+| 種類 | 用途 | 書き方の例 |
+|---|---|---|
+| キッカケ（cue） | PA・VJ・照明・舞台への指示。**部署ごとに1行** | PA：SE「Overture」CI／照明：「2人で歌います。」で暗転 |
+| セリフ（line） | 話者とセリフ | ひかり：改めまして、ソラノートです！ |
+| 楽曲（song） | 曲の開始 | ♪ M1「曲名」4:10 歌唱：全員 |
+| トークテーマ（topic） | 掛け合い・フリートークのお題 | ◆ 初ワンマンが決まった時の第一声 |
+| ト書き（direction） | 動き・立ち位置 | （3名、上手から登場） |
+| 注記（note） | スタッフ向けメモ・押し対策 | ※ 押している場合は告知のみで次曲へ |
+
+### 3-3. キッカケ（部署への指示）の書き方
+
+キッカケは**宛先の部署**を必ず付け、1つの指示を1行にする。
+
+| 部署 | 番号 | 主な内容 |
+|---|---|---|
+| PA（音響） | PA-01〜 | BGM・SE の CI／FO、マイク ON／OFF、袖マイク、返し |
+| VJ（映像） | VJ-01〜 | VTR・ムービー再生、LED／スクリーン送出、歌詞・告知画像 |
+| 照明 | L-01〜 | 客電、暗転、明かりのプリセット、ピンスポット、特効 |
+| 舞台 | ST-01〜 | 転換、登場・ハケ、小道具、バミリ |
+| 全体 | Q-01〜 | 部署が決められない合図 |
+
+- **番号は書き出しスクリプトが部署ごとに自動で振る**（AIは振らない）
+- **何をきっかけに動くか（trigger）** を書く。ブロックの頭で動く場合は省略してよい
+  - 例：「『2人で歌います。』で」「M1アウトロ終わり」「SE CI 8カウント後」「客電UPと同時」
+- 同じタイミングで複数の部署が動く場合も、**部署ごとに分けて**書く（PA と照明を1行に混ぜない）
+- 指示は動詞で終える（CI／FO／ON／OFF／送出／暗転 など）。現場の略語はそのまま使ってよい
+- 入力に部署の指示がない場合は、**台本上必要なものだけ**（暗転、マイクON/OFF など）を補い、ドラフトで「補ったキッカケ」として示す
+
+### 3-4. 文章のルール
+- **キッカケは必ず独立した行**にし、セリフの中に混ぜない（3-3）
+- **MCは短く、自然な話し言葉**で。1人のセリフは1〜2文まで
+- **クロストーク（掛け合い）は書き込みすぎない**。トークテーマ＋話す順番や要点を書き、演者が自分の言葉で話せる余白を残す
+- 自己紹介・グループ紹介で「〇人揃って」は使わない
+- 欠席メンバーがいる場合は、**出演している人を主語に前向きに**書く（「〇〇はお休みです」で終わらせない）
+- キャラクター口調の設定がある場合は**必ず守る**（語尾・一人称・呼び方）
+- 演者と観客の関係は「演者とお客様」。恋愛的・特別扱いの表現は入れない
+- 押した時のカット候補を、注記（note）で明示する
+- 動画メッセージ等の短尺台本は、初稿を書いたあと**70〜75%に削って**テンポを整える
+
+---
+
+## 4. Word台本のレイアウト仕様
+
+> 7章のスクリプトがこの仕様で自動生成します。手作業で作る場合の基準でもあります。
+
+| 項目 | 仕様 |
+|---|---|
+| 用紙 | A4 横、余白 左右15mm・上下14mm |
+| フォント | 和文「游ゴシック」／欧文「Yu Gothic」、本文10.5pt |
+| 言語設定 | **全文 日本語（ja-JP／eastAsia）**。漢字が中国語の字形にならないようにする |
+| 色づかい | 墨（#2B2B2B）とグレー中心のナチュラルな配色。原色・派手な色は使わない |
+| ページ構成 | ①表紙（公演情報・趣旨・備考・キャスト）②セットリスト／タイムテーブル ③進行台本 ④部署別キューシート（PA・VJ・照明・舞台）⑤付録：歌詞パート割 |
+| 進行台本の列 | 時間 20mm／セットリスト 38mm／内容（残り）＋**部署欄**。部署欄は `meta.columns` で指定（初期値は「照明」のみ）。部署欄に入らない部署のキッカケは、内容欄に色帯付きで入る |
+| 部署の色 | PA＝淡い青グレー、VJ＝淡い藤色、照明＝淡い琥珀、舞台＝淡い緑グレー（すべて白に近い淡色） |
+| キューシート | 部署ごとに1ページ。No／時間／セットリスト／キッカケ／指示内容の表。各部署にそのまま渡せる |
+| 表 | 罫線は薄いグレー（#D9D6D0）、見出し行は淡いベージュ（#EFEDE8）、見出し行はページをまたいで繰り返す |
+| 楽曲行 | 淡い黄色（#FFF3C4） |
+| キッカケ | 淡いグレー帯（#EEEEEE）＋「▶ キッカケ」 |
+| 話者名 | キャストカラーを白で薄めた背景に太字 |
+| フッター | 公演名＋ページ番号（右下） |
+
+---
+
+## 5. プロンプター（PPTX）の仕様
+
+### 5-1. デザイン（現場で書き換えやすいシンプル仕様）
+
+| 項目 | 仕様 |
+|---|---|
+| サイズ | 16:9（13.33 × 7.5 インチ） |
+| 背景 | **黒（#000000）** |
+| 載せるもの | **歌詞とMCのセリフだけ**。名前・ヘッダー・ページ番号・NEXT・装飾は載せない |
+| 人の判別 | **文字の色だけ**で行う。話す人・歌う人のキャストカラーを明るくした色。全員・複数人は白 |
+| MC | セリフをそのまま話者の色で表示（トークテーマなど話者のない行は白） |
+| 文字 | 太字・なるべく大きく（標準64pt。長い行があるスライドだけ自動で小さくなる。最小36pt） |
+| 構造 | **1スライド＝テキストボックス1つ**。1行＝1段落。はみ出すとPowerPointが自動で縮小する |
+| 曲タイトル | 曲の前に曲名だけのスライドを1枚（白・中央） |
+| 凡例 | 1枚目に「色と名前の対応」スライド（本番前の確認用。不要なら削除してよい） |
+| 区分・キッカケ | スライド上には出さず、**発表者ノート**に入れる（区分、パート名、キッカケ） |
+
+**現場での修正のしかた**：文字を直接打ち替えるだけでよい。行を足すときは行末で改行すれば同じ色・サイズが引き継がれる。スライドの差し替えは、スライドごと複製して文字を打ち替える。
+
+### 5-2. 改行・ページ分けのルール（最重要）
+
+**基本：1行＝声に出して一息で読める意味のまとまり**
+
+1. **1スライド最大4行**
+2. **1行は全角16文字以内**（最大18文字。超える場合は意味の切れ目で2行に分ける）
+3. 改行は**文節の切れ目**で行う。とくに次の位置で切る
+   - 読点「、」・句点「。」のあと
+   - 助詞（は／が／を／に／で／と／も）のあと
+   - 歌詞の元の改行・スペースの位置
+4. **次のものは絶対に分けない**
+   - 単語・固有名詞・曲名・グループ名（例：「ソラ／ノート」×）
+   - 数字と単位（例：「2／人」×）
+   - 「〜してください」「〜します」などの述語のかたまり
+   - カギカッコ「」の中身（長い場合を除く）
+5. **歌詞のフレーズはスライドをまたがない**。1つのフレーズが次のページに続く分け方は禁止
+6. 歌詞は**パート（1番Aメロ、サビなど）単位でスライドを分ける**。1パートが4行を超える場合は、意味のまとまりで2枚に分ける
+7. **話者が変わったら行を変える**。1行に2人のセリフを入れない
+8. 歌詞の**句読点は元の歌詞どおり**。足さない・消さない
+9. 間奏・ダンスパートは、名前なしで「── 間奏 ──」の1行スライドにする
+10. MCで**キッカケになるセリフ**がある場合、そのスライドの `cue` に書く（例「『2人で歌います。』で暗転」）。`cue` はスライドには表示されず、発表者ノートに入る
+11. 1スライドの最初の行は、前のスライドの最後の行を**くり返さない**
+
+**良い例／悪い例**
+
+| | 例 |
+|---|---|
+| ✕ | ペンライトは胸の高 ／ さでお願いします！（単語の途中で切れている） |
+| ✕ | 撮影・録音はご遠慮ください。ペンライ ／ トは… |
+| ○ | 撮影・録音はご遠慮ください。 ／ ペンライトは ／ 胸の高さでお願いします！ |
+| ✕ | （スライド1の最後）さあ 合図を ／ （スライド2の頭）鳴らそう |
+| ○ | さあ 合図を鳴らそう（1行で収める） |
+
+---
+
+## 6. 中間データ（JSON）
+
+台本とプロンプターの中身を、次の形式のJSONにまとめます。7章のスクリプトはこれを読んでWordとPPTXを作ります。
+
+```json
+{
+  "meta": {
+    "label": "進行台本",
+    "title": "公演名",
+    "subtitle": "サブタイトル（任意）",
+    "date": "2026年11月3日（火・祝）",
+    "venue": "会場名",
+    "open": "17:30",
+    "start": "18:00",
+    "end": "（任意。省略すると自動計算）",
+    "version": "v1.0　2026/10/04",
+    "purpose": "趣旨。改行は \n",
+    "notes": ["備考1", "備考2"],
+    "columns": ["照明"]
+  },
+  "cast": [
+    {"id": "A", "short": "台本・プロンプターでの表記", "name": "演者名", "role": "役名（任意）", "unit": "所属・備考", "color": "E8833A"}
+  ],
+  "songs": [
+    {"id": "M1", "title": "曲名", "duration": "4:10", "singers": ["A", "B"], "credit": "（任意）"}
+  ],
+  "rundown": [
+    {
+      "label": "MC1", "sub": "自己紹介", "duration": "4:00", "summary": "タイムテーブル用の一言（任意）",
+      "time": "（任意。省略すると前の行＋尺で自動計算）",
+      "content": [
+        {"type": "cue", "dept": "PA", "text": "SE「Overture」CI"},
+        {"type": "cue", "dept": "照明", "trigger": "「2人で歌います。」で", "text": "暗転"},
+        {"type": "line", "who": "A", "text": "セリフ"},
+        {"type": "line", "who": ["A", "B"], "text": "2人で言うセリフ"},
+        {"type": "line", "who": "ALL", "text": "全員で言うセリフ"},
+        {"type": "topic", "text": "トークテーマ"},
+        {"type": "direction", "text": "ト書き"},
+        {"type": "song", "song": "M1", "text": "補足（任意）"},
+        {"type": "note", "text": "スタッフ向け注記"}
+      ]
+    }
+  ],
+  "prompter": [
+    {"kind": "title", "section": "M1", "text": "曲名", "sub": "歌唱：ひかり・みお　4:10"},
+    {"kind": "lyric", "section": "M1 曲名", "part": "1番Aメロ", "lines": [
+      {"who": "A", "text": "歌詞の1行"},
+      {"who": ["A", "B"], "text": "2人パート"},
+      {"who": "ALL", "text": "全員パート"}
+    ]},
+    {"kind": "mc", "section": "MC1 自己紹介", "cue": "（任意）キッカケ→ノートへ", "notes": "（任意）発表者ノート",
+     "lines": [{"who": "A", "text": "セリフの1行"}]}
+  ]
+}
+```
+
+**JSONのルール**
+- `color` は「#」なしの6桁（例 `E8833A`）。色名で指定された場合は、落ち着いたトーンの近い色に置き換える
+- `who` はキャストの `id`。全員は `"ALL"`。複数人は配列
+- 楽曲ブロックの `duration` は省略可（`songs` の尺が使われる）
+- `prompter.lines` の1要素＝**プロンプターの1行**。改行位置はここで決まる（スクリプト側では自動改行しない）
+- `kind` が `mc` で `who` を省略すると、名前なしの行（トークテーマ表示など）になる
+- キッカケの `dept` は `PA`／`VJ`／`照明`／`舞台`／`全体` のどれか。`trigger` は任意（省略＝ブロック頭）
+- `meta.columns` に書いた部署は、台本に**独立した列**ができる（例：`["照明"]`、`["照明", "PA", "VJ"]`）。列が多いほど内容欄は狭くなるので、3つまでにする
+- プロンプターの `cue` には、**演者が知る必要のあるもの**（暗転、袖マイクON など）だけを書く
+
+---
+
+## 7. 書き出し手順
+
+### 7-1. コードを実行できるAIの場合（Claude、ChatGPT など）
+1. 付録Aの Python スクリプトを `build_script.py` として保存する
+2. 6章のJSONを `data.json` として保存する
+3. 実行する
+   ```
+   pip install python-docx python-pptx
+   python build_script.py data.json
+   ```
+4. できた `{公演名}_台本.docx` と `{公演名}_プロンプター.pptx` をユーザーに渡す
+5. 実行結果に「⚠」の警告が出たら、その内容を直して再実行する（長すぎる行、未登録のキャストなど）
+
+**スクリプトは改変しないこと**（デザインの統一のため）。必要な場合はユーザーに確認してから。
+
+### 7-2. コードを実行できないAIの場合
+1. 台本ドラフトと**JSON（6章）を出力**する
+2. ユーザーに「このJSONと仕様書を、コードを実行できるAI（Claudeなど）に渡して書き出してください」と伝える
+
+---
+
+## 8. 最終チェックリスト
+
+**台本（Word）**
+- [ ] セットリストの順番・曲名・尺が入力どおり
+- [ ] 開始時刻の積み上げが正しく、終演予定が書かれている
+- [ ] キッカケがセリフと別の行になっていて、すべてに部署（dept）が付いている
+- [ ] 途中で動くキッカケには trigger（何をきっかけに動くか）が書かれている
+- [ ] 部署別キューシートが出力されている
+- [ ] 歌唱メンバー・話者の色分けが正しい
+- [ ] NG表現（〇人揃って、恋愛的表現、欠席者のネガティブな言及）がない
+- [ ] キャラ口調の設定がある場合、守られている
+- [ ] Wordを開いて、漢字が中国語の字形になっていない（言語：日本語）
+
+**プロンプター（PPTX）**
+- [ ] 1スライド4行以内・1行16字以内（警告が出ていない）
+- [ ] 単語・数字・固有名詞の途中で改行していない
+- [ ] 歌詞のフレーズがスライドをまたいでいない
+- [ ] 歌詞が入力とまったく同じ（書き換え・抜け・重複がない）
+- [ ] 各曲の前に曲名スライドがある
+- [ ] 歌唱パート・話者の色が正しい（名前は表示されないので、色だけで判別できるか確認）
+
+- [ ] ライブラリから引用した曲・キャストが一覧で示されている
+- [ ] 新しい曲や変更があれば、ライブラリ更新データ（9-5）を出した
+
+**報告**：書き出し後、ユーザーには「ファイル名」「終演予定」「警告の有無」「確認してほしい点」「ライブラリ更新の有無」だけを短く伝える。
+
+---
+
+## 9. ライブラリ（曲・キャストの保存と再利用）
+
+毎回同じ情報を入力しなくて済むように、**曲・キャスト・決まりごと**を「ライブラリ」としてAI側に保存し、次回から引用する。
+
+### 9-1. 保存するもの
+
+| 種類 | 内容 |
+|---|---|
+| グループ（キャストセット） | グループ名、各キャストの表記・演者名・役名・所属・カラー・口調メモ |
+| 曲 | 曲名、尺、歌唱メンバー（表記名）、クレジット、パート割り入りの歌詞、所属グループ、メモ |
+| ルール | NG表現、表記ルールなど、毎回守る決まりごと |
+
+### 9-2. 形式（ファイル名 `daihon_library.md`）
+
+人が読む一覧と、機械用のJSONを1つのファイルに入れる。**JSONが正本**。台本工房（入力ツール）もこのJSONを読み書きする。
+
+````markdown
+# 台本工房 ライブラリ
+更新：2026-10-04 ／ 曲 3 ／ グループ 1
+
+（ここに人が読む一覧：グループとキャスト、曲名・尺・歌唱）
+
+```json
+{
+  "format": "daihon-library",
+  "version": 1,
+  "updated": "2026-10-04",
+  "groups": [
+    {"name": "ソラノート", "cast": [
+      {"short": "ひかり", "name": "春野ひかり", "role": "", "unit": "リーダー", "color": "E8833A", "voice": "口調メモ（任意）"}
+    ]}
+  ],
+  "songs": [
+    {"title": "はじまりの合図", "duration": "4:10", "group": "ソラノート", "singers": ["全員"],
+     "credit": "", "note": "", "lyrics": "[1番Aメロ]\nひかり：目覚ましより早く…"}
+  ],
+  "rules": ["「〇人揃って」は使わない"]
+}
+```
+````
+
+- `singers` は**表記名**で書く（ID ではない）。全員は `"全員"`
+- `lyrics` の書き方は入力テンプレートと同じ（`[パート名]` の見出し＋行頭に `名前：`）
+- 同じ曲名が別グループにある場合は `group` で区別する
+
+### 9-3. AIごとの保存場所
+
+| 使っているAI | 保存先 | メモ |
+|---|---|---|
+| Claude | プロジェクトのファイルに `daihon_library.md` を追加 | 仕様書も同じプロジェクトに入れておくと、毎回渡す必要がない |
+| ChatGPT | プロジェクトのファイルに追加 | メモリー機能は容量が小さく歌詞が入らないため、ファイルで保存する |
+| Gemini | Gem の「知識」にファイルを追加 | |
+| 上記がない場合 | 依頼のたびにライブラリmdも一緒に貼る | |
+
+メモリー機能には「台本作成は daihon_library と台本仕様書を使う」という**一文だけ**を覚えさせると、呼び出しが確実になる。
+
+### 9-4. 引用のルール（AIが守ること）
+
+1. 入力に曲名だけがあれば、ライブラリの `songs` から**曲名が一致するもの**を探して使う。表記ゆれ（全角半角、記号、スペースの有無）は同じ曲とみなしてよい
+2. 候補が複数ある・見つからない場合は、**推測せず**まとめて質問する
+3. 歌詞はライブラリの文面を**そのまま**使う。入力に今回だけの変更（1番のみ、ショートVer.など）があればそれに従う
+4. グループ名が書かれていれば、そのグループの `cast` をキャスト・色分けとして使う
+5. `rules` と `voice`（口調メモ）は、台本作成ルール（3章）と同じ扱いで守る
+6. 引用した項目は、台本ドラフトと一緒に一覧で示し、ユーザーが確認できるようにする
+
+### 9-5. 更新のルール
+
+書き出しが終わったら、次の場合は**更新データ**を出す。
+
+- ライブラリにない曲・キャストを使った
+- 尺・歌唱メンバー・歌詞・カラーが変わった
+- ユーザーが新しい決まりごとを伝えた
+
+更新データは次の形式で出し、「このまま保存しますか？」と聞く。保存先にファイルを書けるAIなら、`daihon_library.md` を更新した全文で置き換える。書けない場合は全文を出力し、ユーザーに保存を頼む。
+
+```json
+{
+  "format": "daihon-library-update",
+  "updated": "2026-10-04",
+  "groups": [],
+  "songs": [{"title": "新しい曲", "duration": "3:40", "group": "ソラノート", "singers": ["みお"], "credit": "", "lyrics": "…"}],
+  "rules": []
+}
+```
+
+- 同じ曲名（＋同じグループ）は**上書き**、新しい曲は**追加**。消すのはユーザーが頼んだときだけ
+- 台本工房（入力ツール）の「ライブラリ」欄にこのJSONを貼ると、ツール側のライブラリにも取り込める
+
+### 9-6. はじめてライブラリを作るとき
+
+次のどれかで作る。
+
+- 台本工房 で曲・キャストを入力し、「ライブラリに登録」→「ライブラリを書き出す」
+- AIに「これまでの会話・メモリー・ファイルにある曲とキャストを、仕様書9章のライブラリ形式で書き出して」と頼む（AIは**確かな情報だけ**を書き、わからない尺や歌詞は空欄にする）
+
+---
+
+## 付録A　書き出しスクリプト（build_script.py）
+
+```python
+# -*- coding: utf-8 -*-
+"""
+台本・プロンプター生成スクリプト（台本工房）
+------------------------------------------------
+使い方:  python build_script.py data.json [出力フォルダ]
+入力   :  仕様書「6. 中間データ（JSON）」の形式
+出力   :  {タイトル}_台本.docx / {タイトル}_プロンプター.pptx
+必要   :  pip install python-docx python-pptx
+"""
+import json, sys, os, re, copy, unicodedata
+from docx import Document
+from docx.shared import Pt, Mm, RGBColor
+from docx.enum.section import WD_ORIENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
+from docx.enum.table import WD_TABLE_ALIGNMENT, WD_CELL_VERTICAL_ALIGNMENT
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+from pptx import Presentation
+from pptx.util import Inches, Pt as PPt, Emu
+from pptx.dml.color import RGBColor as PRGB
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+
+# ============ 共通設定 ============
+FONT_JA = "游ゴシック"        # 和文（eastAsia）
+FONT_LATIN = "Yu Gothic"      # 欧文
+ALL_ID = "ALL"                # 全員
+INK = "2B2B2B"; SUB = "6B6B6B"; LINE = "D9D6D0"; HEAD = "EFEDE8"
+SONG_BG = "FFF3C4"            # 楽曲行（パフォーマンス）＝黄色
+CUE_BG = "EEEEEE"             # キッカケ
+# 部署（キッカケの宛先）: キー → (番号の頭文字, 表示名, 色)
+DEPTS = {
+    "PA":  ("PA", "PA・音響", "E2E8EE"),
+    "VJ":  ("VJ", "VJ・映像", "EAE5EF"),
+    "照明": ("L",  "照明",     "F5EAD3"),
+    "舞台": ("ST", "舞台",     "E3EBE1"),
+    "全体": ("Q",  "全体",     "EEEEEE"),
+}
+DEPT_ALIAS = {"PA": "PA", "音響": "PA", "SE": "PA", "マイク": "PA", "VJ": "VJ", "映像": "VJ", "VTR": "VJ", "VIDEO": "VJ",
+              "照明": "照明", "LIGHT": "照明", "LIGHTING": "照明", "舞台": "舞台", "ステージ": "舞台", "STAGE": "舞台", "転換": "舞台"}
+def dept_of(it):
+    return DEPT_ALIAS.get(str(it.get("dept", "")).strip().upper(), DEPT_ALIAS.get(str(it.get("dept", "")).strip(), "全体"))
+
+def hex_ok(h, default="888888"):
+    h = (h or default).replace("#", "").strip()
+    return h.upper() if re.fullmatch(r"[0-9A-Fa-f]{6}", h) else default
+
+def mix(h, other, ratio):
+    """h に other を ratio の割合で混ぜる"""
+    a = [int(h[i:i+2], 16) for i in (0, 2, 4)]
+    b = [int(other[i:i+2], 16) for i in (0, 2, 4)]
+    return "".join(f"{round(x*(1-ratio)+y*ratio):02X}" for x, y in zip(a, b))
+
+def to_sec(t):
+    if not t: return 0
+    p = [int(x) for x in str(t).split(":")]
+    return p[0]*60 + p[1] if len(p) == 2 else p[0]*3600 + p[1]*60 + p[2]
+
+def fmt_clock(sec):
+    return f"{sec//3600:02d}:{(sec%3600)//60:02d}"
+
+def fmt_dur(sec):
+    return f"{sec//60}:{sec%60:02d}"
+
+def vwidth(s):
+    """見た目の文字幅（全角=1.0, 半角=0.55）"""
+    return sum(1.0 if unicodedata.east_asian_width(c) in "WFA" else 0.55 for c in s)
+
+# ============ データ読み込み ============
+def load(path):
+    with open(path, encoding="utf-8") as f:
+        d = json.load(f)
+    d.setdefault("meta", {}); d.setdefault("cast", []); d.setdefault("songs", [])
+    d.setdefault("rundown", []); d.setdefault("prompter", [])
+    cast = {c["id"]: c for c in d["cast"]}
+    for c in d["cast"]:
+        c["color"] = hex_ok(c.get("color"))
+        c.setdefault("short", c.get("role") or c.get("name"))
+    cast[ALL_ID] = {"id": ALL_ID, "name": "全員", "short": "全員", "color": "FFFFFF"}
+    songs = {s["id"]: s for s in d["songs"]}
+    # 時刻の自動計算（time が無い行は前の行＋尺で埋める）
+    cur = to_sec(d["meta"]["start"] + ":00") if d["meta"].get("start") else 0
+    for row in d["rundown"]:
+        if not row.get("duration"):
+            sids = [c.get("song") for c in row.get("content", []) if c.get("type") == "song"]
+            if sids and sids[0] in songs:
+                row["duration"] = songs[sids[0]].get("duration")
+        if row.get("time"):
+            cur = to_sec(row["time"] + ":00")
+        else:
+            row["time"] = fmt_clock(cur)
+        cur += to_sec(row.get("duration") or "0:00")
+    d["_end"] = fmt_clock(cur)
+    # キッカケ番号（部署ごとに通し番号）
+    cnt = {}
+    for row in d["rundown"]:
+        for it in row.get("content", []):
+            if it.get("type") == "cue":
+                k = dept_of(it); it["_dept"] = k
+                cnt[k] = cnt.get(k, 0) + 1
+                it["_no"] = f"{DEPTS[k][0]}-{cnt[k]:02d}"
+    cols = d["meta"].get("columns", ["照明"])
+    d["_cols"] = [DEPT_ALIAS.get(str(c).upper(), DEPT_ALIAS.get(str(c), None)) for c in cols]
+    d["_cols"] = [c for c in dict.fromkeys(d["_cols"]) if c]
+    return d, cast, songs
+
+def who_list(who):
+    return who if isinstance(who, list) else [who]
+
+# ============ Word：日本語設定 ============
+def set_run_font(run, size=None, bold=None, color=None, shade=None):
+    rPr = run._element.get_or_add_rPr()
+    rFonts = rPr.find(qn("w:rFonts"))
+    if rFonts is None:
+        rFonts = OxmlElement("w:rFonts"); rPr.insert(0, rFonts)
+    for k, v in (("w:ascii", FONT_LATIN), ("w:hAnsi", FONT_LATIN), ("w:eastAsia", FONT_JA), ("w:cs", FONT_LATIN)):
+        rFonts.set(qn(k), v)
+    lang = rPr.find(qn("w:lang"))
+    if lang is None:
+        lang = OxmlElement("w:lang"); rPr.append(lang)
+    lang.set(qn("w:val"), "ja-JP"); lang.set(qn("w:eastAsia"), "ja-JP")
+    if size: run.font.size = Pt(size)
+    if bold is not None: run.font.bold = bold
+    if color: run.font.color.rgb = RGBColor.from_string(color)
+    if shade:
+        shd = OxmlElement("w:shd")
+        shd.set(qn("w:val"), "clear"); shd.set(qn("w:color"), "auto"); shd.set(qn("w:fill"), shade)
+        rPr.append(shd)
+    return run
+
+def setup_japanese(doc):
+    st = doc.styles["Normal"]
+    st.font.size = Pt(10.5)
+    rPr = st.element.get_or_add_rPr()
+    rFonts = rPr.find(qn("w:rFonts"))
+    if rFonts is None:
+        rFonts = OxmlElement("w:rFonts"); rPr.insert(0, rFonts)
+    for k, v in (("w:ascii", FONT_LATIN), ("w:hAnsi", FONT_LATIN), ("w:eastAsia", FONT_JA), ("w:cs", FONT_LATIN)):
+        rFonts.set(qn(k), v)
+    for a in ("w:asciiTheme", "w:hAnsiTheme", "w:eastAsiaTheme", "w:cstheme"):
+        if rFonts.get(qn(a)) is not None: del rFonts.attrib[qn(a)]
+    lang = rPr.find(qn("w:lang"))
+    if lang is None:
+        lang = OxmlElement("w:lang"); rPr.append(lang)
+    lang.set(qn("w:val"), "ja-JP"); lang.set(qn("w:eastAsia"), "ja-JP"); lang.set(qn("w:bidi"), "ar-SA")
+    # 文書既定（docDefaults）にも日本語を設定
+    styles = doc.styles.element
+    rd = styles.find(qn("w:docDefaults"))
+    if rd is not None:
+        rpr = rd.find(qn("w:rPrDefault") + "/" + qn("w:rPr"))
+        if rpr is not None:
+            lg = rpr.find(qn("w:lang"))
+            if lg is None:
+                lg = OxmlElement("w:lang"); rpr.append(lg)
+            lg.set(qn("w:val"), "ja-JP"); lg.set(qn("w:eastAsia"), "ja-JP")
+            rf = rpr.find(qn("w:rFonts"))
+            if rf is not None:
+                for a in list(rf.attrib): del rf.attrib[a]
+                rf.set(qn("w:ascii"), FONT_LATIN); rf.set(qn("w:hAnsi"), FONT_LATIN); rf.set(qn("w:eastAsia"), FONT_JA)
+    # 設定：テーマ言語を日本語に
+    settings = doc.settings.element
+    z = settings.find(qn("w:zoom"))
+    if z is not None and z.get(qn("w:percent")) is None:
+        z.set(qn("w:percent"), "100")
+    tfl = settings.find(qn("w:themeFontLang"))
+    if tfl is None:
+        tfl = OxmlElement("w:themeFontLang"); settings.append(tfl)
+    tfl.set(qn("w:val"), "ja-JP"); tfl.set(qn("w:eastAsia"), "ja-JP")
+    for s in doc.styles:
+        try:
+            if s.type == 1 and s.name != "Normal":
+                r = s.element.get_or_add_rPr()
+                rf = r.find(qn("w:rFonts"))
+                if rf is None:
+                    rf = OxmlElement("w:rFonts"); r.insert(0, rf)
+                for a in list(rf.attrib): del rf.attrib[a]
+                rf.set(qn("w:ascii"), FONT_LATIN); rf.set(qn("w:hAnsi"), FONT_LATIN); rf.set(qn("w:eastAsia"), FONT_JA)
+        except Exception:
+            pass
+
+def cell_shade(cell, fill):
+    tcPr = cell._element.get_or_add_tcPr()
+    for old in tcPr.findall(qn("w:shd")): tcPr.remove(old)
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:val"), "clear"); shd.set(qn("w:color"), "auto"); shd.set(qn("w:fill"), fill)
+    tcPr.append(shd)
+
+def para_shade(p, fill):
+    pPr = p._element.get_or_add_pPr()
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:val"), "clear"); shd.set(qn("w:color"), "auto"); shd.set(qn("w:fill"), fill)
+    pPr.append(shd)
+
+def table_borders(table, color=LINE):
+    tblPr = table._element.tblPr
+    b = OxmlElement("w:tblBorders")
+    for e in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        el = OxmlElement(f"w:{e}")
+        el.set(qn("w:val"), "single"); el.set(qn("w:sz"), "4"); el.set(qn("w:space"), "0"); el.set(qn("w:color"), color)
+        b.append(el)
+    tblPr.append(b)
+
+def set_widths(table, widths_mm):
+    table.autofit = False
+    tblPr = table._element.tblPr
+    lay = tblPr.find(qn("w:tblLayout"))
+    if lay is None:
+        lay = OxmlElement("w:tblLayout"); tblPr.append(lay)
+    lay.set(qn("w:type"), "fixed")
+    grid = table._element.tblGrid
+    for gc, w in zip(grid.findall(qn("w:gridCol")), widths_mm):
+        gc.set(qn("w:w"), str(int(w * 56.7)))
+    for row in table.rows:
+        for c, w in zip(row.cells, widths_mm):
+            c.width = Mm(w)
+
+def repeat_header(row):
+    trPr = row._tr.get_or_add_trPr()
+    h = OxmlElement("w:tblHeader"); h.set(qn("w:val"), "true"); trPr.append(h)
+
+def no_split(row):
+    trPr = row._tr.get_or_add_trPr()
+    c = OxmlElement("w:cantSplit"); c.set(qn("w:val"), "true"); trPr.append(c)
+
+def p_fmt(p, before=0, after=2, line=1.25, indent_mm=None, hang_mm=None):
+    pf = p.paragraph_format
+    pf.space_before = Pt(before); pf.space_after = Pt(after); pf.line_spacing = line
+    if hang_mm is not None:
+        pf.left_indent = Mm(hang_mm); pf.first_line_indent = Mm(-hang_mm)
+    elif indent_mm is not None:
+        pf.left_indent = Mm(indent_mm)
+    return p
+
+def add_text(cell_or_doc, text, size=10.5, bold=False, color=INK, first=False, **kw):
+    if first and hasattr(cell_or_doc, "paragraphs") and cell_or_doc.paragraphs and not cell_or_doc.paragraphs[0].text:
+        p = cell_or_doc.paragraphs[0]
+    else:
+        p = cell_or_doc.add_paragraph()
+    p_fmt(p, **kw)
+    if text:
+        set_run_font(p.add_run(text), size, bold, color)
+    return p
+
+def page_number_footer(section, title):
+    p = section.footer.paragraphs[0]
+    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    set_run_font(p.add_run(f"{title}　"), 8, False, SUB)
+    r = p.add_run(); set_run_font(r, 8, False, SUB)
+    for t, txt in (("begin", None), (None, "PAGE"), ("end", None)):
+        if t:
+            fc = OxmlElement("w:fldChar"); fc.set(qn("w:fldCharType"), t); r._element.append(fc)
+        else:
+            it = OxmlElement("w:instrText"); it.set(qn("xml:space"), "preserve"); it.text = txt; r._element.append(it)
+
+def speaker_label(cast, who):
+    return "・".join(cast.get(w, {"short": w})["short"] for w in who_list(who))
+
+
+# 要素の並び順を Word の仕様どおりに整える（破損防止）
+ORDER = {
+    "tblPr": "tblStyle tblpPr tblOverlap bidiVisual tblStyleRowBandSize tblStyleColBandSize tblW jc tblCellSpacing tblInd tblBorders shd tblLayout tblCellMar tblLook tblCaption tblDescription",
+    "pPr": "pStyle keepNext keepLines pageBreakBefore framePr widowControl numPr suppressLineNumbers pBdr shd tabs suppressAutoHyphens kinsoku wordWrap overflowPunct topLinePunct autoSpaceDE autoSpaceDN bidi adjustRightInd snapToGrid spacing ind contextualSpacing mirrorIndents suppressOverlap jc textDirection textAlignment textboxTightWrap outlineLvl divId cnfStyle rPr sectPr pPrChange",
+    "rPr": "rStyle rFonts b bCs i iCs caps smallCaps strike dstrike outline shadow emboss imprint noProof snapToGrid vanish webHidden color spacing w kern position sz szCs highlight u effect bdr shd fitText vertAlign rtl cs em lang eastAsianLayout specVanish oMath",
+    "tcPr": "cnfStyle tcW gridSpan hMerge vMerge tcBorders shd noWrap tcMar textDirection tcFitText vAlign hideMark",
+    "trPr": "cnfStyle divId gridBefore gridAfter wBefore wAfter cantSplit trHeight tblHeader tblCellSpacing jc hidden",
+}
+def fix_order(root):
+    W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    for tag, seq in ORDER.items():
+        rank = {n: i for i, n in enumerate(seq.split())}
+        for el in root.iter(W + tag):
+            kids = list(el)
+            kids.sort(key=lambda k: rank.get(k.tag.replace(W, ""), 999))
+            for k in kids: el.remove(k)
+            for k in kids: el.append(k)
+
+# ============ Word 生成 ============
+def build_docx(d, cast, songs, out):
+    m = d["meta"]
+    doc = Document()
+    setup_japanese(doc)
+    sec = doc.sections[0]
+    sec.orientation = WD_ORIENT.LANDSCAPE
+    sec.page_width, sec.page_height = Mm(297), Mm(210)
+    for a in ("left_margin", "right_margin"): setattr(sec, a, Mm(15))
+    sec.top_margin, sec.bottom_margin = Mm(14), Mm(14)
+    page_number_footer(sec, m.get("title", ""))
+    W = 267  # 本文幅 mm
+
+    # --- 表紙ブロック ---
+    add_text(doc, m.get("label", "進行台本"), 9, True, SUB, first=True, after=2)
+    add_text(doc, m.get("title", "（公演名）"), 22, True, INK, after=2, line=1.1)
+    if m.get("subtitle"):
+        add_text(doc, m["subtitle"], 12, False, SUB, after=8)
+    info = [("日時", m.get("date", "")), ("会場", m.get("venue", "")),
+            ("開場／開演", " ／ ".join(x for x in (m.get("open", ""), m.get("start", "")) if x)),
+            ("終演予定", m.get("end") or d["_end"]), ("版", m.get("version", ""))]
+    info = [x for x in info if x[1]]
+    t = doc.add_table(rows=len(info), cols=2); table_borders(t); set_widths(t, [32, 100])
+    for i, (k, v) in enumerate(info):
+        cell_shade(t.cell(i, 0), HEAD)
+        add_text(t.cell(i, 0), k, 9.5, True, SUB, first=True, after=0)
+        add_text(t.cell(i, 1), v, 10.5, False, INK, first=True, after=0)
+
+    if m.get("purpose"):
+        add_text(doc, "趣旨", 12, True, INK, before=12, after=3)
+        for line in str(m["purpose"]).split("\n"):
+            add_text(doc, line, 10.5, False, INK, after=2, line=1.4)
+    if m.get("notes"):
+        add_text(doc, "備考", 12, True, INK, before=10, after=3)
+        for n in m["notes"]:
+            add_text(doc, "・" + n, 10, False, INK, after=1, line=1.35, hang_mm=4)
+
+    # --- キャスト ---
+    if d["cast"]:
+        add_text(doc, "キャスト", 12, True, INK, before=12, after=4)
+        t = doc.add_table(rows=1, cols=4); table_borders(t); set_widths(t, [12, 60, 60, 60])
+        for c, h in zip(t.rows[0].cells, ("色", "表記（台本内）", "演者", "所属・備考")):
+            cell_shade(c, HEAD); add_text(c, h, 9, True, SUB, first=True, after=0)
+        for c in d["cast"]:
+            r = t.add_row().cells
+            cell_shade(r[0], mix(c["color"], "FFFFFF", 0.35))
+            add_text(r[1], c["short"], 10.5, True, INK, first=True, after=0)
+            add_text(r[2], c.get("name", "") + (f"（{c['role']}役）" if c.get("role") else ""), 10, False, INK, first=True, after=0)
+            add_text(r[3], c.get("unit", ""), 10, False, SUB, first=True, after=0)
+
+    # --- セットリスト ---
+    doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
+    add_text(doc, "セットリスト・タイムテーブル", 14, True, INK, after=6)
+    t = doc.add_table(rows=1, cols=5); table_borders(t); set_widths(t, [22, 22, 70, 18, 135])
+    for c, h in zip(t.rows[0].cells, ("開始", "区分", "タイトル", "尺", "歌唱・内容")):
+        cell_shade(c, HEAD); add_text(c, h, 9, True, SUB, first=True, after=0)
+    repeat_header(t.rows[0])
+    for row in d["rundown"]:
+        song = next((songs.get(x.get("song")) for x in row.get("content", []) if x.get("type") == "song"), None)
+        r = t.add_row(); no_split(r); cs = r.cells
+        if song: [cell_shade(c, SONG_BG) for c in cs]
+        add_text(cs[0], row["time"], 10, True, INK, first=True, after=0)
+        add_text(cs[1], row.get("label", ""), 10, True, INK, first=True, after=0)
+        add_text(cs[2], f"{song['title']}" if song else row.get("sub", ""), 10, bool(song), INK, first=True, after=0)
+        add_text(cs[3], row.get("duration", "") or "", 10, False, SUB, first=True, after=0)
+        if song:
+            p = cs[4].paragraphs[0]; p_fmt(p, after=0)
+            for i, w in enumerate(song.get("singers", [])):
+                if i: set_run_font(p.add_run("　"), 10)
+                cc = cast.get(w, {"short": w, "color": "CCCCCC"})
+                set_run_font(p.add_run(f" {cc['short']} "), 9.5, True, INK, mix(cc["color"], "FFFFFF", 0.6))
+            if song.get("credit"):
+                set_run_font(p.add_run("　" + song["credit"]), 8.5, False, SUB)
+        else:
+            add_text(cs[4], row.get("summary", ""), 9.5, False, SUB, first=True, after=0)
+    add_text(doc, f"終演予定　{m.get('end') or d['_end']}", 10, True, INK, before=6)
+
+    # --- 進行台本（時間／セットリスト／内容＋部署欄） ---
+    doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
+    add_text(doc, "進行台本", 14, True, INK, after=2)
+    legend = doc.add_paragraph(); p_fmt(legend, after=6)
+    set_run_font(legend.add_run("キッカケ表記　"), 8.5, True, SUB)
+    for k, (pre, name, col) in DEPTS.items():
+        set_run_font(legend.add_run(f" {pre} "), 8.5, True, INK, col)
+        set_run_font(legend.add_run(f" {name}　"), 8.5, False, SUB)
+    dcols = d["_cols"]
+    cw = 50 if len(dcols) == 1 else 44
+    widths = [20, 38] + [0] + [cw] * len(dcols)
+    widths[2] = 267 - sum(widths)
+    t = doc.add_table(rows=1, cols=3 + len(dcols)); table_borders(t); set_widths(t, widths)
+    t.alignment = WD_TABLE_ALIGNMENT.CENTER
+    heads = ["時間", "セットリスト", "内容"] + [DEPTS[k][1] for k in dcols]
+    for c, h in zip(t.rows[0].cells, heads):
+        cell_shade(c, HEAD); add_text(c, h, 9, True, SUB, first=True, after=0)
+    for i, k in enumerate(dcols):
+        cell_shade(t.rows[0].cells[3 + i], DEPTS[k][2])
+    repeat_header(t.rows[0])
+    for row in d["rundown"]:
+        r = t.add_row(); cs = r.cells
+        has_song = any(x.get("type") == "song" for x in row.get("content", []))
+        if has_song:
+            cell_shade(cs[0], SONG_BG); cell_shade(cs[1], SONG_BG)
+        add_text(cs[0], row["time"], 11, True, INK, first=True, after=0)
+        if row.get("duration"):
+            add_text(cs[0], f"（{row['duration']}）", 8.5, False, SUB, after=0)
+        add_text(cs[1], row.get("label", ""), 11, True, INK, first=True, after=1)
+        if row.get("sub"):
+            add_text(cs[1], row["sub"], 9, False, SUB, after=0)
+        first = True
+        dfirst = {k: True for k in dcols}
+        for it in row.get("content", []):
+            if it.get("type") == "cue" and it["_dept"] in dcols:
+                k = it["_dept"]; j = 3 + dcols.index(k)
+                render_cue_col(cs[j], it, dfirst[k]); dfirst[k] = False
+            else:
+                render_item(cs[2], it, cast, songs, first); first = False
+    # --- 付録：部署別キューシート ---
+    allcues = [(row, it) for row in d["rundown"] for it in row.get("content", []) if it.get("type") == "cue"]
+    for k in DEPTS:
+        cues = [(row, it) for row, it in allcues if it["_dept"] == k]
+        if not cues: continue
+        doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
+        hp = doc.add_paragraph(); p_fmt(hp, after=6)
+        set_run_font(hp.add_run(f" {DEPTS[k][0]} "), 12, True, INK, DEPTS[k][2])
+        set_run_font(hp.add_run(f"　キューシート｜{DEPTS[k][1]}"), 14, True, INK)
+        ct = doc.add_table(rows=1, cols=5); table_borders(ct); set_widths(ct, [18, 18, 40, 76, 115])
+        for c, h in zip(ct.rows[0].cells, ("No", "時間", "セットリスト", "キッカケ", "指示内容")):
+            cell_shade(c, HEAD); add_text(c, h, 9, True, SUB, first=True, after=0)
+        repeat_header(ct.rows[0])
+        for row, it in cues:
+            rr = ct.add_row(); no_split(rr); c = rr.cells
+            add_text(c[0], it["_no"], 9.5, True, INK, first=True, after=0)
+            add_text(c[1], row["time"], 9.5, False, INK, first=True, after=0)
+            add_text(c[2], row.get("label", "") + (f"　{row['sub']}" if row.get("sub") else ""), 9.5, False, INK, first=True, after=0)
+            add_text(c[3], it.get("trigger") or "（ブロック頭）", 9.5, bool(it.get("trigger")), INK if it.get("trigger") else SUB, first=True, after=0)
+            add_text(c[4], it.get("text", ""), 10, False, INK, first=True, after=0, line=1.35)
+
+    # --- 付録：歌詞パート割 ---
+    lyric = [s for s in d["prompter"] if s.get("kind") == "lyric"]
+    if lyric:
+        doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
+        add_text(doc, "付録　歌詞パート割（プロンプター原稿）", 14, True, INK, after=6)
+        cur = None
+        for s in lyric:
+            if s.get("section") != cur:
+                cur = s.get("section")
+                add_text(doc, cur, 11.5, True, INK, before=8, after=3)
+            if s.get("part"):
+                add_text(doc, s["part"], 8.5, False, SUB, before=3, after=1)
+            for ln in s["lines"]:
+                p = doc.add_paragraph(); p_fmt(p, after=0, line=1.3, hang_mm=22)
+                ws = who_list(ln.get("who", ALL_ID))
+                cc = cast.get(ws[0], cast[ALL_ID])
+                bg = "EEEEEE" if ws[0] == ALL_ID else mix(cc["color"], "FFFFFF", 0.6)
+                set_run_font(p.add_run(f" {speaker_label(cast, ws)} "), 8.5, True, INK, bg)
+                set_run_font(p.add_run("\t" + ln["text"]), 10.5, False, INK)
+                p.paragraph_format.tab_stops.add_tab_stop(Mm(22))
+    fix_order(doc.element.body)
+    fix_order(doc.styles.element)
+    doc.save(out)
+
+def render_cue_col(cell, it, first):
+    p = cell.paragraphs[0] if (first and not cell.paragraphs[0].text) else cell.add_paragraph()
+    p_fmt(p, before=0 if first else 4, after=0, line=1.2)
+    set_run_font(p.add_run(it.get("_no", "")), 8.5, True, SUB)
+    if it.get("trigger"):
+        q = cell.add_paragraph(); p_fmt(q, after=0, line=1.2)
+        set_run_font(q.add_run(it["trigger"]), 8.5, False, SUB)
+    q = cell.add_paragraph(); p_fmt(q, after=0, line=1.3)
+    set_run_font(q.add_run(it.get("text", "")), 9.5, True, INK)
+
+def render_item(cell, it, cast, songs, first):
+    ty = it.get("type")
+    def newp():
+        if first and not cell.paragraphs[0].text:
+            return cell.paragraphs[0]
+        return cell.add_paragraph()
+    p = newp()
+    if ty == "cue":
+        k = it.get("_dept", "全体")
+        p_fmt(p, before=2, after=2, line=1.25, hang_mm=14); para_shade(p, DEPTS[k][2])
+        p.paragraph_format.tab_stops.add_tab_stop(Mm(14))
+        set_run_font(p.add_run(it.get("_no", "Q")), 8.5, True, INK)
+        set_run_font(p.add_run("\t"), 9)
+        if it.get("trigger"):
+            set_run_font(p.add_run(it["trigger"] + "　→　"), 9.5, False, SUB)
+        set_run_font(p.add_run(it["text"]), 10, True, INK)
+    elif ty == "line":
+        ws = who_list(it.get("who"))
+        p_fmt(p, after=3, line=1.4, hang_mm=20)
+        p.paragraph_format.tab_stops.add_tab_stop(Mm(20))
+        for i, w in enumerate(ws):
+            cc = cast.get(w, {"short": w, "color": "CCCCCC"})
+            bg = "E6E6E6" if w == ALL_ID else mix(cc["color"], "FFFFFF", 0.55)
+            if i: set_run_font(p.add_run("・"), 9, True, SUB)
+            set_run_font(p.add_run(f" {cc['short']} "), 9.5, True, INK, bg)
+        set_run_font(p.add_run("\t" + it["text"]), 10.5, False, INK)
+    elif ty == "song":
+        s = songs.get(it.get("song"), {"title": it.get("song", "?")})
+        p_fmt(p, before=2, after=2, line=1.3); para_shade(p, SONG_BG)
+        set_run_font(p.add_run(f"♪ {it.get('song','')}「{s['title']}」"), 11, True, INK)
+        if s.get("duration"): set_run_font(p.add_run(f"　{s['duration']}"), 9.5, False, SUB)
+        if s.get("singers"):
+            set_run_font(p.add_run("　歌唱：" + speaker_label(cast, s["singers"])), 9.5, False, SUB)
+        if it.get("text"): set_run_font(p.add_run("　" + it["text"]), 9.5, False, SUB)
+    elif ty == "topic":
+        p_fmt(p, before=2, after=3, line=1.35, hang_mm=6)
+        set_run_font(p.add_run("◆ "), 10, True, "8A7A5A")
+        set_run_font(p.add_run(it["text"]), 10.5, True, INK)
+    elif ty == "direction":
+        p_fmt(p, after=3, line=1.35, indent_mm=20)
+        set_run_font(p.add_run(f"（{it['text'].strip('（）()')}）"), 9.5, False, SUB)
+    else:  # note
+        p_fmt(p, after=2, line=1.3)
+        set_run_font(p.add_run("※ " + it["text"]), 9, False, SUB)
+
+# ============ PPTX（プロンプター） ============
+SW, SH = 13.333, 7.5
+BODY_X, BODY_W, NAME_W = 0.6, 12.13, 2.0
+BODY_TOP, BODY_BOTTOM = 1.25, 6.45
+MAX_PT, MIN_PT = 66, 36
+GRAY, DIM, CUEC = "A0A0A0", "6E6E6E", "E8C25A"
+
+def p_run(run, text, size, color, bold=True):
+    run.text = text
+    f = run.font; f.size = PPt(size); f.bold = bold; f.color.rgb = PRGB.from_string(color)
+    f.name = FONT_LATIN
+    rPr = run._r.get_or_add_rPr()
+    rPr.set("lang", "ja-JP"); rPr.set("altLang", "en-US")
+    for tag in ("a:ea", "a:cs"):
+        el = rPr.find(qn(tag))
+        if el is None:
+            el = OxmlElement(tag); rPr.append(el)
+        el.set("typeface", FONT_JA if tag == "a:ea" else FONT_LATIN)
+    return run
+
+def tbox(slide, x, y, w, h, anchor=MSO_ANCHOR.MIDDLE, wrap=False):
+    tb = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
+    tf = tb.text_frame; tf.word_wrap = wrap; tf.vertical_anchor = anchor
+    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
+    tf.auto_size = None
+    return tb, tf
+
+def bright(col):
+    """黒背景で読めるように明るく"""
+    return "FFFFFF" if col == "FFFFFF" else mix(col, "FFFFFF", 0.30)
+
+def build_pptx(d, cast, songs, out, warnings):
+    """プロンプター：黒背景に文字だけ。1スライド＝テキストボックス1つ。人の判別は色のみ。
+    現場で書き換えやすいよう、装飾・名前・ヘッダーは入れない（区分やキッカケはノートへ）"""
+    prs = Presentation()
+    prs.slide_width, prs.slide_height = Inches(SW), Inches(SH)
+    blank = prs.slide_layouts[6]
+    BOX_X, BOX_Y, BOX_W, BOX_H = 0.6, 0.45, SW - 1.2, SH - 0.9
+    BASE = 64                      # 標準の文字サイズ（長い行のあるスライドだけ自動で小さくする）
+
+    def color_of(who):
+        ws = who_list(who or ALL_ID)
+        if len(ws) != 1: return "FFFFFF"
+        return bright(cast.get(ws[0], cast[ALL_ID])["color"])
+
+    def new_slide(notes):
+        sl = prs.slides.add_slide(blank)
+        bg = sl.background.fill; bg.solid(); bg.fore_color.rgb = PRGB(0, 0, 0)
+        if notes: sl.notes_slide.notes_text_frame.text = notes
+        tb = sl.shapes.add_textbox(Inches(BOX_X), Inches(BOX_Y), Inches(BOX_W), Inches(BOX_H))
+        tb.name = "プロンプター本文"
+        tf = tb.text_frame; tf.word_wrap = True; tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+        tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
+        bp = tf._txBody.find(qn("a:bodyPr"))
+        for el in list(bp): bp.remove(el)
+        bp.append(OxmlElement("a:normAutofit"))   # はみ出したらPowerPointが自動で縮小
+        return tf
+
+    # 凡例（色と人の対応）
+    people = [c for c in d["cast"]]
+    if people:
+        tf = new_slide("色の凡例（本番前の確認用。不要なら削除）")
+        size = min(BASE, int(BOX_H * 72 / (len(people) * 1.5)))
+        for k, c in enumerate(people):
+            para = tf.paragraphs[0] if k == 0 else tf.add_paragraph()
+            para.line_spacing = 1.15
+            p_run(para.add_run(), c.get("short", ""), size, bright(c["color"]))
+
+    slides = d["prompter"]
+    for i, s in enumerate(slides):
+        kind = s.get("kind", "mc")
+        note = "　".join(x for x in (s.get("section", ""), s.get("part", "")) if x)
+        if s.get("cue"): note += f"\nキッカケ：{s['cue']}"
+        if s.get("notes"): note += "\n" + s["notes"]
+        tf = new_slide(note)
+        if kind == "title":
+            para = tf.paragraphs[0]; para.alignment = PP_ALIGN.CENTER
+            size = min(66, int(BOX_W * 72 / max(vwidth(s.get("text", "")), 1) * 0.9))
+            p_run(para.add_run(), s.get("text", ""), size, "FFFFFF")
+            continue
+        lines = s.get("lines", [])
+        if not lines: continue
+        widest = max(vwidth(ln["text"]) for ln in lines)
+        size = min(BASE, int(BOX_W * 72 / widest * 0.95), int(BOX_H * 72 / (len(lines) * 1.4)))
+        if size < 36:
+            warnings.append(f"スライド{i+1}（{s.get('section','')}）: 文字が多すぎます（{size}pt）。行を減らすか分割してください。")
+            size = 36
+        for k, ln in enumerate(lines):
+            para = tf.paragraphs[0] if k == 0 else tf.add_paragraph()
+            para.line_spacing = 1.15
+            p_run(para.add_run(), ln["text"], size, color_of(ln.get("who")))
+    prs.save(out)
+
+# ============ 実行 ============
+def main():
+    src = sys.argv[1]
+    outdir = sys.argv[2] if len(sys.argv) > 2 else os.path.dirname(os.path.abspath(src))
+    d, cast, songs = load(src)
+    name = re.sub(r'[\\/:*?"<>|\s]+', "_", d["meta"].get("title", "script"))
+    docx_path = os.path.join(outdir, f"{name}_台本.docx")
+    pptx_path = os.path.join(outdir, f"{name}_プロンプター.pptx")
+    warnings = []
+    # チェック：未登録キャスト・長すぎる行
+    ids = set(cast)
+    for i, s in enumerate(d["prompter"]):
+        if len(s.get("lines", [])) > 4:
+            warnings.append(f"スライド{i+1}（{s.get('section','')}）: {len(s['lines'])}行あります。4行以内に分けてください。")
+        for ln in s.get("lines", []):
+            for w in who_list(ln.get("who") or ALL_ID):
+                if w not in ids: warnings.append(f"未登録のキャストID: {w}")
+            if vwidth(ln["text"]) > 18:
+                warnings.append(f"長い行（{vwidth(ln['text']):.0f}字幅）: {ln['text']}")
+    build_docx(d, cast, songs, docx_path)
+    build_pptx(d, cast, songs, pptx_path, warnings)
+    print("出力:", docx_path); print("出力:", pptx_path)
+    print("終演予定:", d["meta"].get("end") or d["_end"])
+    for w in dict.fromkeys(warnings): print("⚠", w)
+
+if __name__ == "__main__":
+    main()
+```
+
+## 付録B　入力済みJSONの見本（架空の公演）
+
+```json
+{
+  "meta": {
+    "label": "進行台本 ／ 見本データ",
+    "title": "SAMPLE LIVE 2026 AUTUMN",
+    "subtitle": "〜はじまりの合図〜（架空公演・見本）",
+    "date": "2026年11月3日（火・祝）",
+    "venue": "サンプルホール（東京都）",
+    "open": "17:30",
+    "start": "18:00",
+    "version": "v1.0　2026/10/04",
+    "purpose": "新ユニット「ソラノート」の初ワンマン。結成からの歩みを振り返り、次の目標（年末イベント出演）を発表する。\n初見のお客様にも3人の個性が伝わるよう、MCは短く・テンポよく。",
+    "notes": [
+      "MCは各5分以内。押した場合はMC2のトークテーマ②をカット",
+      "告知はアンコール後、ひかりが担当",
+      "カバー曲のクレジットは配信概要欄のみに記載"
+    ],
+    "columns": [
+      "照明"
+    ]
+  },
+  "cast": [
+    {
+      "id": "A",
+      "short": "ひかり",
+      "name": "春野ひかり",
+      "role": "",
+      "unit": "ソラノート／リーダー",
+      "color": "E8833A"
+    },
+    {
+      "id": "B",
+      "short": "みお",
+      "name": "青井みお",
+      "role": "",
+      "unit": "ソラノート",
+      "color": "3A7BD5"
+    },
+    {
+      "id": "C",
+      "short": "つむぎ",
+      "name": "緑川つむぎ",
+      "role": "",
+      "unit": "ソラノート",
+      "color": "3BA55C"
+    }
+  ],
+  "songs": [
+    {
+      "id": "M1",
+      "title": "はじまりの合図",
+      "duration": "4:10",
+      "singers": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "id": "M2",
+      "title": "ソーダ色の午後",
+      "duration": "3:50",
+      "singers": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "id": "M3",
+      "title": "まっすぐな約束",
+      "duration": "4:30",
+      "singers": [
+        "A",
+        "B",
+        "C"
+      ]
+    }
+  ],
+  "rundown": [
+    {
+      "label": "影アナ",
+      "sub": "注意事項",
+      "duration": "2:00",
+      "summary": "袖マイクで注意事項",
+      "content": [
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "客電50%"
+        },
+        {
+          "type": "cue",
+          "dept": "PA",
+          "text": "BGM FO　→　袖マイクON（3名）"
+        },
+        {
+          "type": "line",
+          "who": "A",
+          "text": "みなさん、こんばんは！ソラノートのひかりです！"
+        },
+        {
+          "type": "line",
+          "who": "B",
+          "text": "みおです。開演前に、いくつかお願いがあります。"
+        },
+        {
+          "type": "line",
+          "who": "C",
+          "text": "撮影・録音はご遠慮ください。ペンライトは胸の高さでお願いします！"
+        },
+        {
+          "type": "line",
+          "who": "ALL",
+          "text": "それでは、もう少しだけお待ちください！"
+        },
+        {
+          "type": "cue",
+          "dept": "PA",
+          "text": "袖マイクOFF",
+          "trigger": "「お待ちください！」で"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "客電FO",
+          "trigger": "袖マイクOFF後"
+        }
+      ]
+    },
+    {
+      "label": "OP",
+      "sub": "SE",
+      "duration": "1:00",
+      "content": [
+        {
+          "type": "cue",
+          "dept": "PA",
+          "text": "SE「Overture」CI"
+        },
+        {
+          "type": "cue",
+          "dept": "VJ",
+          "text": "OPムービー再生（1:00）",
+          "trigger": "SE CIと同時"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "ステージ青・スモーク",
+          "trigger": "SE CI 8カウント後"
+        },
+        {
+          "type": "direction",
+          "text": "3名、上手から登場し定位置へ"
+        }
+      ]
+    },
+    {
+      "label": "M1",
+      "content": [
+        {
+          "type": "song",
+          "song": "M1",
+          "text": "イントロで客席あおり（ひかり）"
+        },
+        {
+          "type": "cue",
+          "dept": "VJ",
+          "text": "M1歌詞モーションをLED送出",
+          "trigger": "イントロ頭"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "M1用プリセット（暖色・サビでストロボ）",
+          "trigger": "イントロ頭"
+        }
+      ]
+    },
+    {
+      "label": "MC1",
+      "sub": "自己紹介",
+      "duration": "4:00",
+      "summary": "自己紹介・初ワンマンの気持ち",
+      "content": [
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "MC明かり（全体白）",
+          "trigger": "M1アウトロ終わり"
+        },
+        {
+          "type": "cue",
+          "dept": "VJ",
+          "text": "ロゴループ"
+        },
+        {
+          "type": "line",
+          "who": "A",
+          "text": "改めまして、ソラノートです！今日は来てくれてありがとう！"
+        },
+        {
+          "type": "line",
+          "who": "A",
+          "text": "ソラノートのリーダー、オレンジ担当の春野ひかりです！"
+        },
+        {
+          "type": "line",
+          "who": "B",
+          "text": "ブルー担当、青井みおです。今日はゆっくり楽しんでいってね。"
+        },
+        {
+          "type": "line",
+          "who": "C",
+          "text": "グリーン担当、緑川つむぎです！声、出していきましょう〜！"
+        },
+        {
+          "type": "topic",
+          "text": "トークテーマ：初ワンマンが決まったときの、それぞれの第一声"
+        },
+        {
+          "type": "line",
+          "who": "B",
+          "text": "次は、私とつむぎの2人で歌います。"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "暗転",
+          "trigger": "「2人で歌います。」で"
+        },
+        {
+          "type": "cue",
+          "dept": "舞台",
+          "text": "ひかり上手ハケ　→　センター立ち位置バミリ確認",
+          "trigger": "暗転中"
+        }
+      ]
+    },
+    {
+      "label": "M2",
+      "content": [
+        {
+          "type": "song",
+          "song": "M2"
+        },
+        {
+          "type": "cue",
+          "dept": "PA",
+          "text": "ひかりのマイクOFF（2人曲）",
+          "trigger": "M2頭"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "青系・2人ピンスポット",
+          "trigger": "M2頭"
+        }
+      ]
+    },
+    {
+      "label": "MC2",
+      "sub": "告知・ラスト曲前",
+      "duration": "3:00",
+      "content": [
+        {
+          "type": "cue",
+          "dept": "PA",
+          "text": "ひかりのマイクON",
+          "trigger": "再登場時"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "全体明るめ",
+          "trigger": "ひかり再登場"
+        },
+        {
+          "type": "line",
+          "who": "A",
+          "text": "ここで、みなさんにお知らせがあります！"
+        },
+        {
+          "type": "line",
+          "who": "A",
+          "text": "ソラノート、年末のカウントダウンイベントに出演が決まりました！"
+        },
+        {
+          "type": "note",
+          "text": "押している場合は告知のみで次曲へ"
+        },
+        {
+          "type": "line",
+          "who": "ALL",
+          "text": "最後の曲です。聴いてください。「まっすぐな約束」"
+        },
+        {
+          "type": "cue",
+          "dept": "VJ",
+          "text": "告知画像（年末イベント）を送出",
+          "trigger": "「出演が決まりました！」で"
+        }
+      ]
+    },
+    {
+      "label": "M3",
+      "content": [
+        {
+          "type": "song",
+          "song": "M3"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "M3プリセット（ラストサビで客席照らし）",
+          "trigger": "イントロ頭"
+        }
+      ]
+    },
+    {
+      "label": "ED",
+      "sub": "終演アナウンス",
+      "duration": "1:30",
+      "content": [
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "暗転",
+          "trigger": "M3アウトロ終わり"
+        },
+        {
+          "type": "cue",
+          "dept": "PA",
+          "text": "BGM CI　→　袖マイクON（ひかり）",
+          "trigger": "3名ハケ後"
+        },
+        {
+          "type": "line",
+          "who": "A",
+          "text": "本日はありがとうございました！お気をつけてお帰りください！"
+        },
+        {
+          "type": "cue",
+          "dept": "PA",
+          "text": "袖マイクOFF"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "客電UP",
+          "trigger": "袖マイクOFF後"
+        },
+        {
+          "type": "cue",
+          "dept": "VJ",
+          "text": "終演スライド送出",
+          "trigger": "客電UPと同時"
+        }
+      ]
+    }
+  ],
+  "prompter": [
+    {
+      "section": "影アナ",
+      "kind": "mc",
+      "cue": "袖マイクON",
+      "lines": [
+        {
+          "who": "A",
+          "text": "みなさん、こんばんは！"
+        },
+        {
+          "who": "A",
+          "text": "ソラノートのひかりです！"
+        },
+        {
+          "who": "B",
+          "text": "みおです。開演前に"
+        },
+        {
+          "who": "B",
+          "text": "いくつかお願いがあります。"
+        }
+      ]
+    },
+    {
+      "section": "影アナ",
+      "kind": "mc",
+      "lines": [
+        {
+          "who": "C",
+          "text": "撮影・録音はご遠慮ください。"
+        },
+        {
+          "who": "C",
+          "text": "ペンライトは"
+        },
+        {
+          "who": "C",
+          "text": "胸の高さでお願いします！"
+        },
+        {
+          "who": "ALL",
+          "text": "もう少しだけお待ちください！"
+        }
+      ]
+    },
+    {
+      "kind": "title",
+      "section": "M1",
+      "text": "はじまりの合図",
+      "sub": "歌唱：ひかり・みお・つむぎ　4:10"
+    },
+    {
+      "section": "M1 はじまりの合図",
+      "kind": "lyric",
+      "part": "1番 Aメロ",
+      "lines": [
+        {
+          "who": "A",
+          "text": "目覚ましより早く"
+        },
+        {
+          "who": "A",
+          "text": "胸が鳴った朝"
+        },
+        {
+          "who": "B",
+          "text": "カーテンの向こうで"
+        },
+        {
+          "who": "B",
+          "text": "空が手を振る"
+        }
+      ]
+    },
+    {
+      "section": "M1 はじまりの合図",
+      "kind": "lyric",
+      "part": "1番 サビ",
+      "lines": [
+        {
+          "who": "ALL",
+          "text": "さあ 合図を鳴らそう"
+        },
+        {
+          "who": "C",
+          "text": "まだ見ぬ明日へ"
+        },
+        {
+          "who": [
+            "A",
+            "B"
+          ],
+          "text": "迷っても 転んでも"
+        },
+        {
+          "who": "ALL",
+          "text": "ここから始まるんだ"
+        }
+      ]
+    },
+    {
+      "section": "MC1 自己紹介",
+      "kind": "mc",
+      "lines": [
+        {
+          "who": "A",
+          "text": "改めまして、ソラノートです！"
+        },
+        {
+          "who": "A",
+          "text": "今日は来てくれてありがとう！"
+        }
+      ]
+    },
+    {
+      "section": "MC1 自己紹介",
+      "kind": "mc",
+      "lines": [
+        {
+          "who": "A",
+          "text": "リーダー、オレンジ担当"
+        },
+        {
+          "who": "A",
+          "text": "春野ひかりです！"
+        },
+        {
+          "who": "B",
+          "text": "ブルー担当、青井みおです。"
+        },
+        {
+          "who": "C",
+          "text": "グリーン担当、緑川つむぎです！"
+        }
+      ]
+    },
+    {
+      "section": "MC1 自己紹介",
+      "kind": "mc",
+      "cue": "トークテーマ",
+      "lines": [
+        {
+          "text": "初ワンマンが決まったときの"
+        },
+        {
+          "text": "それぞれの第一声"
+        }
+      ]
+    },
+    {
+      "section": "MC1 自己紹介",
+      "kind": "mc",
+      "cue": "「2人で歌います。」で暗転",
+      "lines": [
+        {
+          "who": "B",
+          "text": "次は、私とつむぎの"
+        },
+        {
+          "who": "B",
+          "text": "2人で歌います。"
+        }
+      ]
+    },
+    {
+      "kind": "title",
+      "section": "M2",
+      "text": "ソーダ色の午後",
+      "sub": "歌唱：みお・つむぎ　3:50"
+    }
+  ]
+}
+```
+</script>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const SPEC=document.getElementById('spec').textContent.replace(/^\n/,'');
+const KEY='scriptkit.draft.v1';
+let mode='full';
+
+const SAMPLE={
+  title:'SAMPLE LIVE 2026 AUTUMN',subtitle:'〜はじまりの合図〜（見本データ）',version:'v1.0',
+  date:'2026年11月3日（火・祝）',venue:'サンプルホール（東京都）',open:'17:30',start:'18:00',
+  purpose:'新ユニット「ソラノート」の初ワンマン。結成からの歩みを振り返り、年末イベント出演を発表する。\n初見のお客様にも3人の個性が伝わるよう、MCは短く・テンポよく。',
+  cast:[
+    {short:'ひかり',name:'春野ひかり',unit:'ソラノート／リーダー',color:'#E8833A'},
+    {short:'みお',name:'青井みお',unit:'ソラノート',color:'#3A7BD5'},
+    {short:'つむぎ',name:'緑川つむぎ',unit:'ソラノート',color:'#3BA55C'}],
+  songs:[
+    {title:'はじまりの合図',dur:'4:10',singers:[0,1,2],credit:'',lyrics:'[1番Aメロ]\nひかり：目覚ましより早く　胸が鳴った朝\nみお：カーテンの向こうで　空が手を振る\n[1番サビ]\n全員：さあ 合図を鳴らそう\nつむぎ：まだ見ぬ明日へ\nひかり・みお：迷っても 転んでも\n全員：ここから始まるんだ'},
+    {title:'ソーダ色の午後',dur:'3:50',singers:[1,2],credit:'',lyrics:''},
+    {title:'まっすぐな約束',dur:'4:30',singers:[0,1,2],credit:'',lyrics:''}],
+  set:[
+    {label:'影アナ',sub:'注意事項（袖マイク）',dur:'2:00',cues:{PA:'袖マイクON（3名）\n「お待ちください！」で 袖マイクOFF',VJ:'',L:'客電50%\n袖マイクOFF後 客電FO',ST:''}},
+    {label:'OP',sub:'SE「Overture」',dur:'1:00',cues:{PA:'SE「Overture」CI',VJ:'SE CIと同時 OPムービー再生',L:'SE CI 8カウント後 ステージ青・スモーク',ST:''}},
+    {label:'M1',sub:'',dur:'',cues:{PA:'',VJ:'イントロ頭 M1歌詞モーションをLED送出',L:'M1用プリセット（暖色・サビでストロボ）',ST:''}},
+    {label:'MC1',sub:'自己紹介・初ワンマンの気持ち',dur:'4:00',cues:{PA:'',VJ:'ロゴループ',L:'MC明かり（全体白）\n「2人で歌います。」で 暗転',ST:'暗転中 ひかり上手ハケ'}},
+    {label:'M2',sub:'',dur:''},
+    {label:'MC2',sub:'告知・ラスト曲前',dur:'3:00',cues:{PA:'再登場時 ひかりのマイクON',VJ:'「出演が決まりました！」で 告知画像を送出',L:'ひかり再登場で 全体明るめ',ST:''}},
+    {label:'M3',sub:'',dur:''},
+    {label:'ED',sub:'終演アナウンス（ひかり）',dur:'1:30'}],
+  mc:'MC1：自己紹介（担当カラーも言う）。トークテーマ「初ワンマンが決まったときの第一声」\nMC2：年末カウントダウンイベント出演の告知（ひかり）',
+  cues:'OPは3名が上手から登場。照明はユニットカラーを基調に。',columns:['L'],
+  notes:'MCは各5分以内。押した場合はMC1のトークテーマをカット\n「〇人揃って」は使わない'
+};
+const EMPTY={title:'',subtitle:'',version:'v1.0',date:'',venue:'',open:'',start:'',purpose:'',
+  cast:[{short:'',name:'',unit:'',color:'#B8935F'}],songs:[{title:'',dur:'',singers:[],credit:'',lyrics:''}],
+  set:[{label:'',sub:'',dur:''}],mc:'',cues:'',notes:'',columns:['L']};
+
+let S=load()||structuredClone(SAMPLE);
+const DEPTS=[{k:'PA',key:'PA',name:'PA・音響',ph:'例）SE「Overture」CI\n「〜」で マイクOFF'},{k:'VJ',key:'VJ',name:'VJ・映像',ph:'例）OPムービー再生\nイントロ頭 歌詞モーション送出'},{k:'L',key:'照明',name:'照明',ph:'例）客電FO\n「〜」で 暗転'},{k:'ST',key:'舞台',name:'舞台',ph:'例）暗転中 上手ハケ'}];
+function fixState(){if(!Array.isArray(S.columns))S.columns=['L'];S.set.forEach(r=>{if(!r.cues)r.cues={PA:'',VJ:'',L:'',ST:''}})}
+fixState();
+const cueLines=r=>DEPTS.flatMap(d=>String((r.cues||{})[d.k]||'').split('\n').map(t=>t.trim()).filter(Boolean).map(t=>({d,t})));
+function splitCue(t){const m=t.match(/^(.+?(?:で|後|と同時|時|頭|終わり))[\s　、]+(.+)$/);return m?{trigger:m[1],text:m[2]}:{text:t}}
+const LKEY='scriptkit.library.v1';
+let LIB=loadLib();let lyrMode='ref';
+function emptyLib(){return{format:'daihon-library',version:1,updated:'',groups:[],songs:[],rules:[]}}
+function loadLib(){try{const r=localStorage.getItem(LKEY);if(r){const j=JSON.parse(r);if(j&&/^(daihon|scriptkit)-library$/.test(j.format)){j.format='daihon-library';return j}}}catch(e){}return emptyLib()}
+function saveLib(){try{localStorage.setItem(LKEY,JSON.stringify(LIB))}catch(e){}}
+const norm=t=>String(t||'').normalize('NFKC').toLowerCase().replace(/[\s\-_・.,、。!！?？'"「」『』（）()〜~]/g,'');
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+function libFind(title){const n=norm(title);if(!n)return null;const hit=LIB.songs.filter(x=>norm(x.title)===n);
+  if(hit.length<=1)return hit[0]||null;const g=S.cast.map(c=>c.unit).join(' ');return hit.find(x=>x.group&&g.includes(x.group))||hit[0]}
+function namesToIdx(names){if(!names)return[];if(names.includes('全員'))return S.cast.map((_,i)=>i);
+  return names.map(n=>S.cast.findIndex(c=>norm(c.short)===norm(n))).filter(i=>i>=0)}
+function idxToNames(s){if(s.singers.length&&s.singers.length===S.cast.length&&S.cast.length>1)return['全員'];return s.singers.map(i=>S.cast[i]?.short).filter(Boolean)}
+function applyLibSong(s,L,force){if(!L)return false;
+  if(force||!s.dur)s.dur=L.duration||s.dur;if(force||!s.credit)s.credit=L.credit||s.credit;
+  if(force||!(s.lyrics||'').trim())s.lyrics=L.lyrics||s.lyrics;if(force||!s.singers.length)s.singers=namesToIdx(L.singers);
+  s.title=s.title||L.title;return true}
+function libSame(s){const L=libFind(s.title);return !!(L&&(L.lyrics||'').trim()&&(L.lyrics||'').trim()===(s.lyrics||'').trim())}
+
+function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
+let saveT;
+function persist(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S));
+  const d=new Date();$('#savedAt').textContent='DRAFT : '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}catch(e){}},400)}
+
+/* ---------- 時間 ---------- */
+function toSec(t){t=String(t||'').trim();if(!t)return 0;
+  let m=t.match(/^(\d+):(\d{1,2})$/);if(m)return +m[1]*60+ +m[2];
+  m=t.match(/^(?:(\d+)\s*分)?\s*(?:(\d+)\s*秒)?$/);if(m&&(m[1]||m[2]))return (+(m[1]||0))*60+ +(m[2]||0);
+  if(/^\d+$/.test(t))return +t*60;return NaN}
+const fmtDur=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+const fmtMin=s=>Math.floor(s/60)+'分'+(s%60?String(s%60).padStart(2,'0')+'秒':'');
+const fmtClock=s=>{s=((s%86400)+86400)%86400;return String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor(s%3600/60)).padStart(2,'0')};
+const songIndex=label=>{const m=String(label||'').trim().match(/^M(\d+)$/i);return m?(+m[1]-1):-1};
+function rowDur(r){const i=songIndex(r.label);if(!r.dur&&i>=0&&S.songs[i])return toSec(S.songs[i].dur);return toSec(r.dur)}
+function timeline(){let cur=S.start?toSec(S.start)*60:0;const out=[];
+  for(const r of S.set){const d=rowDur(r);out.push({start:cur,dur:isNaN(d)?0:d,bad:isNaN(d)});cur+=isNaN(d)?0:d}
+  return{rows:out,end:cur,total:out.reduce((a,b)=>a+b.dur,0)}}
+
+/* ---------- 描画 ---------- */
+function el(tag,attrs={},kids=[]){const e=document.createElement(tag);
+  for(const[k,v]of Object.entries(attrs)){if(k==='text')e.textContent=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v)}
+  for(const k of[].concat(kids))if(k!=null)e.append(k);return e}
+function txt(val,ph,on,cls,id){const i=el('input',{type:'text',placeholder:ph||'',id});i.value=val||'';if(cls)i.className=cls;i.addEventListener('input',()=>{on(i.value);update()});return i}
+
+function renderCast(){const box=$('#castRows');box.replaceChildren(
+  el('div',{class:'rowh'},[el('span',{text:'色'}),el('span',{text:'表記'}),el('span',{text:'演者名・役名'}),el('span',{text:'所属・備考'}),el('span')]));
+  S.cast.forEach((c,i)=>{
+    const col=el('input',{type:'color','aria-label':'カラー',id:'cc'+i});col.value=c.color||'#B8935F';
+    col.addEventListener('input',()=>{c.color=col.value;renderSongs();update()});
+    box.append(el('div',{class:'row'},[
+      el('span',{class:'swatch'},col),
+      txt(c.short,'ひかり',v=>{c.short=v;renderSongs()},'', 'cs'+i),
+      el('span',{class:'opt'},txt(c.name,'春野ひかり（〇〇役）',v=>c.name=v,'','cn'+i)),
+      el('span',{class:'opt'},txt(c.unit,'ユニット・担当など',v=>c.unit=v,'','cu'+i)),
+      el('button',{type:'button',class:'x','aria-label':'このキャストを削除',text:'×',onclick:()=>{S.cast.splice(i,1);S.songs.forEach(s=>s.singers=s.singers.filter(x=>x!==i).map(x=>x>i?x-1:x));renderAll()}})]))});
+  box.append(el('button',{type:'button',class:'add',text:'＋ キャストを追加',onclick:()=>{S.cast.push({short:'',name:'',unit:'',color:'#8A8A8A'});renderAll()}}))}
+
+function renderSongs(){const box=$('#songRows');box.replaceChildren(
+  el('div',{class:'rowh'},[el('span',{text:'No'}),el('span',{text:'曲名'}),el('span',{text:'尺'}),el('span',{text:'クレジット'}),el('span')]));
+  S.songs.forEach((s,i)=>{
+    const chips=el('div',{class:'chips'});
+    S.cast.forEach((c,ci)=>{const on=s.singers.includes(ci);
+      chips.append(el('button',{type:'button',class:'chip','aria-pressed':String(on),onclick:()=>{s.singers=on?s.singers.filter(x=>x!==ci):[...s.singers,ci].sort((a,b)=>a-b);renderSongs();update()}},[el('i',{style:'background:'+(c.color||'#888')}),c.short||('キャスト'+(ci+1))]))});
+    const has=(s.lyrics||'').trim().length>0;
+    const ta=el('textarea',{id:'sl'+i,placeholder:'[1番Aメロ]\nひかり：歌詞の1行目\nみお：歌詞の2行目\n[1番サビ]\n全員：…'});ta.value=s.lyrics||'';
+    ta.addEventListener('input',()=>{s.lyrics=ta.value;update()});
+    const det=el('details',{class:'lyr'},[el('summary',{},['歌詞',el('span',{class:'pill '+(has?'ok':'no'),text:has?((s.lyrics.trim().split('\n').length)+' 行'):'未入力'})]),ta]);
+    if(s._open)det.open=true;det.addEventListener('toggle',()=>s._open=det.open);
+    box.append(el('div',{class:'row'},[
+      el('span',{class:'sidw'},[el('span',{class:'sid',text:'M'+(i+1)}),libFind(s.title)?el('span',{class:'badge',title:'ライブラリ登録済み',text:'LIB'}):null]),
+      (()=>{const t=txt(s.title,'曲名',v=>s.title=v,'','st'+i);t.setAttribute('list','libSongs');
+        t.addEventListener('change',()=>{const L=libFind(t.value);if(L){applyLibSong(s,L,false);renderSongs();renderSet();update();libSay('「'+L.title+'」をライブラリから入れました。')}else renderSongs()});return t})(),
+      txt(s.dur,'4:10',v=>s.dur=v,'mono','sd'+i),
+      el('span',{class:'opt'},txt(s.credit,'作詞・作曲など（任意）',v=>s.credit=v,'','sc'+i)),
+      el('button',{type:'button',class:'x','aria-label':'この曲を削除',text:'×',onclick:()=>{S.songs.splice(i,1);renderAll()}}),
+      el('div',{class:'lyr',style:'display:flex;flex-direction:column;gap:6px'},[el('div',{style:'display:flex;gap:8px;align-items:center;flex-wrap:wrap'},[el('span',{class:'lab',text:'歌唱'}),chips]),det])]))});
+  box.append(el('button',{type:'button',class:'add',text:'＋ 曲を追加',onclick:()=>{S.songs.push({title:'',dur:'',singers:[],credit:'',lyrics:''});renderAll()}}))}
+
+function renderSet(){const box=$('#setRows');const tl=timeline();box.replaceChildren(
+  el('div',{class:'rowh'},[el('span',{text:'開始'}),el('span',{text:'区分'}),el('span',{text:'内容'}),el('span',{text:'尺'}),el('span')]));
+  S.set.forEach((r,i)=>{const si=songIndex(r.label);const isSong=si>=0&&S.songs[si];
+    const durIn=txt(r.dur,isSong?(S.songs[si].dur||'曲の尺'):'3:00',v=>r.dur=v,'mono','rd'+i);
+    box.append(el('div',{class:'row'},[
+      el('span',{class:'clock'+(isSong?' song':''),id:'clk'+i,text:fmtClock(tl.rows[i].start)}),
+      txt(r.label,'MC1 / M1',v=>{r.label=v;renderSetSoft()},'','rl'+i),
+      el('span',{class:'sub'},txt(r.sub,isSong?('♪ '+(S.songs[si].title||'')):'内容',v=>r.sub=v,'','rs'+i)),
+      durIn,
+      (()=>{const n=cueLines(r).length;const b=el('button',{type:'button',class:'cuebtn'+(n?' has':''),'aria-expanded':String(!!r._cue),'aria-label':'この行のキューを編集',text:n?('CUE '+n):'CUE'});
+        b.addEventListener('click',()=>{r._cue=!r._cue;renderSet()});return b})(),
+      el('span',{class:'ctrl'},[
+        el('button',{type:'button',class:'x','aria-label':'上へ',text:'↑',onclick:()=>{if(i>0){[S.set[i-1],S.set[i]]=[S.set[i],S.set[i-1]];renderAll()}}}),
+        el('button',{type:'button',class:'x','aria-label':'削除',text:'×',onclick:()=>{S.set.splice(i,1);renderAll()}})]),
+      r._cue?el('div',{class:'cuebox'},DEPTS.map(d=>{const ta=el('textarea',{id:'cue'+d.k+i,placeholder:d.ph});ta.value=r.cues[d.k]||'';
+        ta.addEventListener('input',()=>{r.cues[d.k]=ta.value;const b=ta.closest('.row').querySelector('.cuebtn');const n=cueLines(r).length;b.textContent=n?('CUE '+n):'CUE';b.classList.toggle('has',!!n);update()});
+        return el('div',{class:'cuef '+d.k},[el('label',{for:'cue'+d.k+i},[el('span',{class:'dtag '+d.k,text:d.k}),' '+d.name]),ta])})):null]))});
+  box.append(el('button',{type:'button',class:'add',text:'＋ 行を追加',onclick:()=>{S.set.push({label:'',sub:'',dur:'',cues:{PA:'',VJ:'',L:'',ST:''}});renderAll()}}));
+  box.append(el('div',{class:'total'},[el('span',{class:'tag',text:'合計 '+fmtMin(tl.total)}),el('span',{},[el('span',{class:'tag',text:'終演予定 '}),el('strong',{id:'endClock',text:fmtClock(tl.end)})])]))}
+let softT;function renderSetSoft(){clearTimeout(softT);softT=setTimeout(()=>{const a=document.activeElement&&document.activeElement.id;renderSet();if(a&&document.getElementById(a)){const e=document.getElementById(a);e.focus();try{e.setSelectionRange(e.value.length,e.value.length)}catch(_){}}update()},500)}
+
+function bindSimple(){for(const k of['title','subtitle','version','date','venue','open','start','purpose','mc','cues','notes']){
+  const e=document.getElementById(k);e.value=S[k]||'';e.oninput=()=>{S[k]=e.value;if(k==='start')refreshClocks();update()}}}
+function refreshClocks(){const tl=timeline();S.set.forEach((r,i)=>{const c=document.getElementById('clk'+i);if(c)c.textContent=fmtClock(tl.rows[i].start)});
+  const e=$('#endClock');if(e)e.textContent=fmtClock(tl.end);const t=document.querySelector('.set .total .tag');if(t)t.textContent='合計 '+fmtMin(tl.total)}
+function renderCols(){const box=$('#colSel');box.replaceChildren(...DEPTS.map(d=>{const on=S.columns.includes(d.k);
+  return el('button',{type:'button',class:'chip','aria-pressed':String(on),onclick:()=>{if(on)S.columns=S.columns.filter(x=>x!==d.k);else if(S.columns.length<3)S.columns=[...S.columns,d.k];renderCols();update()}},[el('span',{class:'dtag '+d.k,text:d.k}),d.name])}),
+  el('span',{class:'hint',style:'margin:0',text:S.columns.length?'選んでいない部署の指示は「内容」欄に色帯で入ります':'すべての指示が「内容」欄に入ります'}))}
+function renderAll(){fixState();renderCast();renderSongs();renderSet();renderCols();bindSimple();update()}
+
+/* ---------- md 生成 ---------- */
+const ids=i=>String.fromCharCode(65+i);
+const cell=v=>String(v||'').replace(/\|/g,'／').replace(/\n/g,' ')||'—';
+function singersText(s){if(!s.singers.length)return'（未設定）';if(s.singers.length===S.cast.length&&S.cast.length>1)return'全員';return s.singers.map(i=>S.cast[i]?.short||'?').join('・')}
+function buildData(){const tl=timeline();const L=[];
+  L.push('# 公演データ（台本工房で作成）','');
+  L.push('## 公演情報','',
+    '- 公演名：'+(S.title||'（未入力）'),
+    ...(S.subtitle?['- サブタイトル：'+S.subtitle]:[]),
+    '- 日時：'+(S.date||'（未入力）'),'- 会場：'+(S.venue||'（未入力）'),
+    '- 開場／開演：'+(S.open||'—')+' ／ '+(S.start||'—'),
+    '- 終演予定（自動計算）：'+(S.start?fmtClock(tl.end):'（開演時刻が未入力）')+'（合計 '+fmtMin(tl.total)+'）',
+    '- 版：'+(S.version||'v1.0'),'');
+  L.push('## 趣旨','',S.purpose||'（未入力）','');
+  L.push('## キャスト・色分け','','| ID | 表記 | 演者名・役名 | 所属・備考 | カラー |','|---|---|---|---|---|');
+  S.cast.forEach((c,i)=>L.push(`| ${ids(i)} | ${cell(c.short)} | ${cell(c.name)} | ${cell(c.unit)} | ${(c.color||'').toUpperCase()} |`));
+  L.push('','## セットリスト・時間','','| 開始 | 区分 | 内容 | 尺 |','|---|---|---|---|');
+  S.set.forEach((r,i)=>{const si=songIndex(r.label);const song=si>=0?S.songs[si]:null;
+    L.push(`| ${fmtClock(tl.rows[i].start)} | ${cell(r.label)} | ${cell(song?('♪ '+song.title+(r.sub?'／'+r.sub:'')):r.sub)} | ${fmtDur(tl.rows[i].dur)} |`)});
+  L.push('','終演予定：'+(S.start?fmtClock(tl.end):'（開演時刻が未入力）'),'');
+  L.push('## 楽曲・時間','','| No | 曲名 | 尺 | 歌唱 | クレジット |','|---|---|---|---|---|');
+  S.songs.forEach((s,i)=>L.push(`| M${i+1} | ${cell(s.title)} | ${cell(s.dur)} | ${cell(singersText(s))} | ${cell(s.credit)} |`));
+  L.push('','## 歌詞','','※ 歌詞はこのとおりに使うこと（書き換え・補完をしない）。行頭の「名前：」が歌唱パート。','');
+  S.songs.forEach((s,i)=>{L.push(`### M${i+1}「${s.title||'（曲名未入力）'}」`,'');
+    if(lyrMode==='ref'&&libSame(s)){const Lb=libFind(s.title);L.push('→ **ライブラリ参照**（daihon_library.md の「'+Lb.title+'」'+(Lb.group?'／'+Lb.group:'')+'。歌詞を全文引用すること）','');return}
+    L.push((s.lyrics||'').trim()?'```text\n'+s.lyrics.trim()+'\n```':'（歌詞未入力：ライブラリにあれば引用し、なければプロンプターは曲名スライドのみ）','')});
+  if(LIB.rules.length){L.push('## ライブラリの決まりごと（毎回守る）','',LIB.rules.map(r=>'- '+r).join('\n'),'')}
+  L.push('## MCで話す内容・入れたい要素','',S.mc||'（指定なし）','');
+  L.push('## キッカケ（部署別）','','- 台本に独立した欄を作る部署：'+(S.columns.length?S.columns.map(k=>DEPTS.find(d=>d.k===k).name).join('・'):'なし（すべて内容欄）'),
+    '- 1行＝1指示。「〜で」などのきっかけが先に書かれていれば trigger、残りが指示内容','');
+  let anyCue=false;S.set.forEach((r,i)=>{const cs=cueLines(r);if(!cs.length)return;anyCue=true;
+    L.push(`### ${fmtClock(tl.rows[i].start)}　${r.label||'（区分未入力）'}${r.sub?'　'+r.sub:''}`,'');cs.forEach(({d,t})=>L.push(`- [${d.key}] ${t}`));L.push('')});
+  if(!anyCue)L.push('（行ごとの指定なし。台本上必要なキッカケのみAIが補う）','');
+  L.push('## 全体の演出メモ','',S.cues||'（指定なし）','');
+  const notes=(S.notes||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  L.push('## 備考','',notes.length?notes.map(n=>'- '+n).join('\n'):'（なし）','');
+  // JSON下書き
+  const castJ=S.cast.map((c,i)=>({id:ids(i),short:c.short,name:c.name,role:'',unit:c.unit,color:(c.color||'#888888').replace('#','').toUpperCase()}));
+  const songJ=S.songs.map((s,i)=>({id:'M'+(i+1),title:s.title,duration:s.dur,singers:(s.singers.length===S.cast.length&&S.cast.length>1)?['ALL']:s.singers.map(ids),credit:s.credit}));
+  const runJ=S.set.map(r=>{const si=songIndex(r.label);const o={label:r.label,sub:r.sub||''};
+    if(r.dur)o.duration=r.dur;else if(!(si>=0&&S.songs[si]))o.duration='';
+    o.content=(si>=0&&S.songs[si])?[{type:'song',song:'M'+(si+1)}]:[];
+    cueLines(r).forEach(({d,t})=>o.content.push(Object.assign({type:'cue',dept:d.key},splitCue(t))));return o});
+  const J={meta:{label:'進行台本',title:S.title,subtitle:S.subtitle,date:S.date,venue:S.venue,open:S.open,start:S.start,version:S.version,purpose:S.purpose,notes,columns:S.columns.map(k=>DEPTS.find(d=>d.k===k).key)},
+    cast:castJ,songs:songJ,rundown:runJ,prompter:[]};
+  L.push('## JSON下書き（仕様書6章の形式）','','meta・cast・songs・rundown の骨組みと、入力されたキッカケは入力済み。セリフ等を足して `rundown[].content` を完成させ（キッカケは適切な位置へ並べ替える）、`prompter` を仕様書に従って作成すること。','','```json',JSON.stringify(J,null,2),'```','');
+  return L.join('\n')}
+function refNote(){return(lyrMode==='ref'&&S.songs.some(libSame))?'> 「ライブラリ参照」と書かれた曲は、プロジェクト／ナレッジにある daihon_library.md（仕様書9章）から引用してください。見つからない場合は質問してください。\n':''}
+function buildFull(){const head=['> **AIへの依頼**',
+  '> この文書は「台本・プロンプター作成仕様書」と、末尾の「公演データ」でできています。',
+  '> 仕様書に従って、公演データから進行台本（Word）とプロンプター（PPTX）を作成してください。',
+  '> まず仕様書2章の手順どおり、台本ドラフトをチャットで見せてください。'].join('\n')+'\n'+refNote()+'\n';
+  return mode==='full'?head+SPEC.trim()+'\n\n---\n\n'+buildData():'> **AIへの依頼**\n> 先に渡した「台本・プロンプター作成仕様書」に従い、以下の公演データから進行台本（Word）とプロンプター（PPTX）を作成してください。\n'+refNote()+'\n'+buildData()}
+
+/* ---------- チェック ---------- */
+function checks(){const W=[];const tl=timeline();
+  if(!S.title.trim())W.push('公演名が未入力です');
+  if(!/^\d{1,2}:\d{2}$/.test(S.start||''))W.push('開演時刻を「18:00」の形で入れてください（開始時刻の計算に使います）');
+  const names=new Set(S.cast.map(c=>c.short.trim()).filter(Boolean));
+  S.cast.forEach((c,i)=>{if(!c.short.trim())W.push(`キャスト${i+1}の表記が未入力です`)});
+  S.songs.forEach((s,i)=>{const n='M'+(i+1);
+    if(!s.title.trim())W.push(n+'の曲名が未入力です');
+    if(!s.dur||isNaN(toSec(s.dur)))W.push(n+'の尺が未入力か形式違いです（例 4:10）');
+    if(!s.singers.length)W.push(n+'の歌唱メンバーが未選択です');
+    if(!(s.lyrics||'').trim())W.push(n+'の歌詞が未入力です');
+    else{const bad=new Set();(s.lyrics||'').split('\n').forEach(l=>{const m=l.match(/^\s*([^：:\[\]]{1,20})[：:]/);if(m)m[1].split(/[・、,＆&]/).map(x=>x.trim()).forEach(x=>{if(x&&x!=='全員'&&!names.has(x))bad.add(x)})});
+      if(bad.size)W.push(`${n}の歌詞に、キャストにない名前があります：${[...bad].join('・')}`)}
+    if(!S.set.some(r=>songIndex(r.label)===i))W.push(n+'がセットリストに入っていません')});
+  S.set.forEach((r,i)=>{const si=songIndex(r.label);if(si>=0&&!S.songs[si])W.push(`セットリスト「${r.label}」に対応する曲がありません`);
+    if(tl.rows[i].bad)W.push(`セットリスト${i+1}行目の尺が形式違いです（例 3:00）`);
+    if(!r.label.trim())W.push(`セットリスト${i+1}行目の区分が未入力です`)});
+  return W}
+
+let upT;function update(){persist();clearTimeout(upT);upT=setTimeout(paint,120)}
+function paint(){$('#lyrModeWrap').hidden=!S.songs.some(libSame);const md=buildFull();window.__md=md;
+  const data=buildData();
+  const pv=$('#preview');pv.replaceChildren();
+  if(mode==='full')pv.append(el('div',{class:'specnote',text:'＋ 冒頭に「AIへの依頼」と仕様書（約'+SPEC.split('\n').length+'行・書き出しスクリプト込み）が入ります。下は公演データ部分のプレビューです。'}));
+  pv.append(el('pre',{text:data}));
+  const W=checks();const ck=$('#checks');ck.replaceChildren(...(W.length?W.slice(0,8).map(w=>el('div',{class:'c',text:w})):[el('div',{class:'c good',text:'入力に抜けはありません'})]),...(W.length>8?[el('div',{class:'c',text:`ほか ${W.length-8} 件`})]:[]));
+  const kb=new Blob([md]).size/1024;$('#sizeTag').textContent=md.split('\n').length+' LINES · '+kb.toFixed(1)+' KB';
+  $('#foot1').textContent=(W.length?W.length+' 件の確認事項':'READY');refreshClocks()}
+
+/* ---------- 書き出し ---------- */
+function fname(){return((S.title||'公演').replace(/[\\/:*?"<>|]+/g,'').replace(/\s+/g,'_'))+'_台本依頼.md'}
+function say(t){$('#status').textContent=t}
+$('#copyBtn').addEventListener('click',()=>{const md=buildFull();
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(md).then(()=>say('コピーしました。AIのチャットに貼り付けてください。'),()=>fallbackCopy(md))}else fallbackCopy(md)});
+function fallbackCopy(md){const pv=$('#preview');const ta=el('textarea',{'aria-label':'書き出し内容',style:'width:100%;min-height:300px;font-family:var(--mono);font-size:12px'});ta.value=md;pv.replaceChildren(ta);ta.focus();ta.select();say('自動コピーできませんでした。選択された状態の文字をコピー（Ctrl/⌘＋C）してください。')}
+let downloads=null;
+if(window.claude&&window.claude.use){window.claude.use('downloads').then(d=>{downloads=d;$('#saveBtn').hidden=!d;$('#expSave').hidden=!d}).catch(()=>{})}
+else{/* 通常のWebページ（GitHub Pagesなど）ではブラウザのダウンロードを使う */
+  downloads={save:({filename,data})=>{const u=URL.createObjectURL(new Blob([data],{type:'text/markdown;charset=utf-8'}));const a=document.createElement('a');a.href=u;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);return Promise.resolve({status:'saved'})}};
+  $('#saveBtn').hidden=false;$('#expSave').hidden=false}
+$('#saveBtn').addEventListener('click',async()=>{if(!downloads)return;
+  try{await downloads.save({filename:fname(),data:buildFull()});say(fname()+' を保存しました。')}
+  catch(e){const c=e&&e.code;say(c==='declined'?'保存をキャンセルしました。':c==='rate_limited'?'保存の確認画面がすでに開いています。':'この画面では保存できません。コピーを使ってください。');if(c==='unavailable'||c==='not_granted')$('#saveBtn').hidden=true}});
+for(const[id,m]of[['modeFull','full'],['modeData','data']])$('#'+id).addEventListener('click',()=>{mode=m;$('#modeFull').setAttribute('aria-pressed',m==='full');$('#modeData').setAttribute('aria-pressed',m==='data');paint()});
+$('#sampleBtn').addEventListener('click',()=>{S=structuredClone(SAMPLE);renderAll();say('見本データを読み込みました。')});
+$('#clearBtn').addEventListener('click',()=>{$('#confirmBar').hidden=false});
+$('#clearNo').addEventListener('click',()=>{$('#confirmBar').hidden=true});
+$('#clearYes').addEventListener('click',()=>{S=structuredClone(EMPTY);$('#confirmBar').hidden=true;renderAll();say('入力を消しました。')});
+/* ---------- ライブラリ ---------- */
+function libSay(t){$('#libMsg').textContent=t}
+function renderLib(){$('#lsSongs').textContent=LIB.songs.length;$('#lsGroups').textContent=LIB.groups.length;$('#lsRules').textContent=LIB.rules.length;$('#lsDate').textContent=LIB.updated||'—';
+  const dl=$('#libSongs');dl.replaceChildren(...LIB.songs.map(x=>el('option',{value:x.title,label:(x.group?x.group+' · ':'')+(x.duration||'')})));
+  const gs=$('#grpSel');gs.replaceChildren(...(LIB.groups.length?LIB.groups.map((g,i)=>el('option',{value:String(i),text:g.name+'（'+g.cast.length+'名）'})):[el('option',{value:'',text:'（未登録）'})]));
+  $('#grpLoad').disabled=!LIB.groups.length;
+  const ll=$('#libList');ll.replaceChildren(...(LIB.songs.length?LIB.songs.map((x,i)=>el('div',{class:'li'},[
+    el('span',{text:x.title}),el('span',{class:'m',text:x.duration||'—'}),el('span',{class:'m',text:(x.singers||[]).join('・')||'—'}),
+    el('span',{class:'m',text:(x.lyrics||'').trim()?(x.lyrics.trim().split('\n').length+'行'):'歌詞なし'}),
+    el('button',{type:'button',class:'x','aria-label':x.title+'をライブラリから削除',text:'×',onclick:()=>{LIB.songs.splice(i,1);LIB.updated=today();saveLib();renderLib();renderSongs();update();libSay('「'+x.title+'」をライブラリから削除しました。')}})])):[el('div',{class:'empty',text:'まだ曲が登録されていません。曲を入力して「今の入力をライブラリに登録」を押すか、ライブラリを読み込んでください。'})]))}
+function panels(show){for(const id of['regPanel','impPanel','expPanel'])$('#'+id).hidden=id!==show}
+$('#libListToggle').addEventListener('click',e=>{const l=$('#libList');l.hidden=!l.hidden;e.currentTarget.setAttribute('aria-expanded',String(!l.hidden));e.currentTarget.textContent=l.hidden?'登録済みの曲を見る':'一覧を閉じる'});
+$('#grpLoad').addEventListener('click',()=>{const g=LIB.groups[+$('#grpSel').value];if(!g)return;
+  const keep=S.songs.map(s=>idxToNames(s));
+  S.cast=g.cast.map(c=>({short:c.short||'',name:[c.name,c.role?'（'+c.role+'役）':''].join(''),unit:c.unit||g.name,color:'#'+String(c.color||'8A8A8A').replace('#','')}));
+  S.songs.forEach((s,i)=>s.singers=namesToIdx(keep[i]));renderAll();libSay('「'+g.name+'」のキャスト'+g.cast.length+'名を呼び出しました。')});
+$('#libSongAdd').addEventListener('click',()=>{const v=$('#libSongIn').value;const L=libFind(v);
+  if(!v.trim()){libSay('曲名を入力してください。');return}
+  const s={title:L?L.title:v.trim(),dur:'',singers:[],credit:'',lyrics:''};if(L)applyLibSong(s,L,true);
+  let k=S.songs.findIndex(x=>!x.title.trim()&&!(x.lyrics||'').trim());if(k<0){S.songs.push(s);k=S.songs.length-1}else S.songs[k]=s;
+  const lab='M'+(k+1);if(!S.set.some(r=>r.label.trim().toUpperCase()===lab)){const e=S.set.findIndex(r=>!r.label.trim()&&!r.sub.trim());if(e>=0)S.set[e].label=lab;else S.set.push({label:lab,sub:'',dur:''})}$('#libSongIn').value='';renderAll();
+  libSay(L?'「'+L.title+'」を追加しました（尺・歌唱・歌詞を入れました）。':'「'+s.title+'」はライブラリにないため、曲名だけ追加しました。')});
+$('#libReg').addEventListener('click',()=>{panels('regPanel');const r=$('#regName');r.value=r.value||(LIB.groups[0]&&LIB.groups.find(g=>S.cast.some(c=>c.unit&&c.unit.includes(g.name)))?.name)||(S.cast[0]?.unit||'').split(/[／/]/)[0]||'';r.focus()});
+$('#regCancel').addEventListener('click',()=>panels(null));
+$('#regDo').addEventListener('click',()=>{const name=$('#regName').value.trim();if(!name){libSay('グループ名を入れてください。');return}
+  const cast=S.cast.filter(c=>c.short.trim()).map(c=>{const m=c.name.match(/^(.*?)（(.+?)役）$/);return{short:c.short.trim(),name:m?m[1]:c.name,role:m?m[2]:'',unit:c.unit,color:(c.color||'#888888').replace('#','').toUpperCase(),voice:''}});
+  const gi=LIB.groups.findIndex(g=>g.name===name);
+  if(gi>=0){const old=LIB.groups[gi];cast.forEach(c=>{const o=old.cast.find(x=>x.short===c.short);if(o&&o.voice)c.voice=o.voice});LIB.groups[gi]={name,cast}}else LIB.groups.push({name,cast});
+  let add=0,upd=0;S.songs.filter(s=>s.title.trim()).forEach(s=>{const rec={title:s.title.trim(),duration:s.dur||'',group:name,singers:idxToNames(s),credit:s.credit||'',note:'',lyrics:(s.lyrics||'').trim()};
+    const k=LIB.songs.findIndex(x=>norm(x.title)===norm(rec.title)&&(x.group||'')===name);
+    if(k>=0){rec.note=LIB.songs[k].note||'';LIB.songs[k]=rec;upd++}else{LIB.songs.push(rec);add++}});
+  LIB.updated=today();saveLib();panels(null);renderLib();renderSongs();update();
+  libSay(`「${name}」を登録しました。曲：追加 ${add}／更新 ${upd}。AI側のファイルも「ライブラリを書き出す」で更新してください。`)});
+function libMd(){const L=['# 台本工房 ライブラリ','','更新：'+(LIB.updated||today())+' ／ 曲 '+LIB.songs.length+' ／ グループ '+LIB.groups.length,'',
+  '> 台本・プロンプター作成仕様書（9章）用のライブラリです。AIはこのファイルの JSON を正本として、曲名・尺・歌唱・歌詞・キャストを引用してください。',''];
+  LIB.groups.forEach(g=>{L.push('## '+g.name,'');g.cast.forEach(c=>L.push(`- ${c.short}｜${c.name}${c.role?'（'+c.role+'役）':''}｜#${c.color}${c.voice?'｜口調：'+c.voice:''}`));L.push('')});
+  if(LIB.songs.length){L.push('## 曲','','| 曲名 | 尺 | グループ | 歌唱 | 歌詞 |','|---|---|---|---|---|');
+    LIB.songs.forEach(x=>L.push(`| ${cell(x.title)} | ${cell(x.duration)} | ${cell(x.group)} | ${cell((x.singers||[]).join('・'))} | ${(x.lyrics||'').trim()?'あり':'なし'} |`));L.push('')}
+  if(LIB.rules.length){L.push('## 決まりごと','',...LIB.rules.map(r=>'- '+r),'')}
+  L.push('## データ（JSON・正本）','','```json',JSON.stringify(Object.assign({},LIB,{updated:LIB.updated||today()}),null,2),'```','');return L.join('\n')}
+$('#libExport').addEventListener('click',()=>{if(!LIB.songs.length&&!LIB.groups.length){libSay('ライブラリが空です。先に「今の入力をライブラリに登録」してください。');return}panels('expPanel')});
+$('#expClose').addEventListener('click',()=>panels(null));
+$('#expCopy').addEventListener('click',()=>{const md=libMd();if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(md).then(()=>libSay('ライブラリをコピーしました。AIのプロジェクトに daihon_library.md として保存してください。'),()=>libFallback(md));else libFallback(md)});
+function libFallback(md){const t=$('#impText');panels('impPanel');t.value=md;t.focus();t.select();libSay('自動コピーできませんでした。選択された文字をコピーしてください（このまま「取り込む」は押さないでください）。')}
+$('#expSave').addEventListener('click',async()=>{if(!downloads)return;try{await downloads.save({filename:'daihon_library.md',data:libMd()});libSay('daihon_library.md を保存しました。')}catch(e){libSay(e&&e.code==='declined'?'保存をキャンセルしました。':'保存できませんでした。コピーを使ってください。')}});
+$('#libImportOpen').addEventListener('click',()=>{panels('impPanel');$('#impText').focus()});
+$('#impCancel').addEventListener('click',()=>panels(null));
+$('#impFile').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{$('#impText').value=r.result;importText(r.result)};r.readAsText(f,'utf-8');e.target.value=''});
+$('#impDo').addEventListener('click',()=>importText($('#impText').value));
+function findJson(text){const out=[];const re=/```(?:json)?\s*\n([\s\S]*?)```/g;let m;while((m=re.exec(text)))out.push(m[1]);out.push(text);
+  for(const c of out){try{const j=JSON.parse(c.trim());if(j&&/^(daihon|scriptkit)-library/.test(j.format||''))return j}catch(e){}}
+  const a=text.indexOf('{'),b=text.lastIndexOf('}');if(a>=0&&b>a){try{const j=JSON.parse(text.slice(a,b+1));if(j&&/^(daihon|scriptkit)-library/.test(j.format||''))return j}catch(e){}}return null}
+function importText(text){const j=findJson(text||'');if(!j){libSay('ライブラリのデータが見つかりません。「format": "daihon-library」を含むJSONを貼ってください。');return}
+  const full=/-library$/.test(j.format);let gA=0,sA=0,sU=0,rA=0;
+  (j.groups||[]).forEach(g=>{if(!g||!g.name)return;const cast=(g.cast||[]).map(c=>({short:c.short||'',name:c.name||'',role:c.role||'',unit:c.unit||'',color:String(c.color||'8A8A8A').replace('#','').toUpperCase(),voice:c.voice||''}));
+    const k=LIB.groups.findIndex(x=>x.name===g.name);if(k>=0)LIB.groups[k]={name:g.name,cast};else{LIB.groups.push({name:g.name,cast});gA++}});
+  (j.songs||[]).forEach(x=>{if(!x||!x.title)return;const rec={title:x.title,duration:x.duration||'',group:x.group||'',singers:x.singers||[],credit:x.credit||'',note:x.note||'',lyrics:x.lyrics||''};
+    const k=LIB.songs.findIndex(y=>norm(y.title)===norm(rec.title)&&(y.group||'')===rec.group);if(k>=0){LIB.songs[k]=Object.assign({},LIB.songs[k],rec);sU++}else{LIB.songs.push(rec);sA++}});
+  (j.rules||[]).forEach(r=>{if(r&&!LIB.rules.includes(r)){LIB.rules.push(r);rA++}});
+  LIB.updated=j.updated||today();saveLib();panels(null);$('#impText').value='';renderLib();renderSongs();update();
+  libSay(`${full?'ライブラリ':'更新データ'}を取り込みました。曲：追加 ${sA}／更新 ${sU}、グループ：追加 ${gA}、決まりごと：追加 ${rA}。`)}
+for(const[id,m]of[['lyrRef','ref'],['lyrFull','full']])$('#'+id).addEventListener('click',()=>{lyrMode=m;$('#lyrRef').setAttribute('aria-pressed',m==='ref');$('#lyrFull').setAttribute('aria-pressed',m==='full');paint()});
+renderLib();
+renderAll();
+})();
+</script>
+
+</body>
+</html>
