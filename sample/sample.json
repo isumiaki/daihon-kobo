@@ -1,0 +1,533 @@
+{
+  "meta": {
+    "label": "進行台本 ／ 見本データ",
+    "title": "SAMPLE LIVE 2026 AUTUMN",
+    "subtitle": "〜はじまりの合図〜（架空公演・見本）",
+    "date": "2026年11月3日（火・祝）",
+    "venue": "サンプルホール（東京都）",
+    "open": "17:30",
+    "start": "18:00",
+    "version": "v1.0　2026/10/04",
+    "purpose": "新ユニット「ソラノート」の初ワンマン。結成からの歩みを振り返り、次の目標（年末イベント出演）を発表する。\n初見のお客様にも3人の個性が伝わるよう、MCは短く・テンポよく。",
+    "notes": [
+      "MCは各5分以内。押した場合はMC2のトークテーマ②をカット",
+      "告知はアンコール後、ひかりが担当",
+      "カバー曲のクレジットは配信概要欄のみに記載"
+    ],
+    "columns": [
+      "照明"
+    ]
+  },
+  "cast": [
+    {
+      "id": "A",
+      "short": "ひかり",
+      "name": "春野ひかり",
+      "role": "",
+      "unit": "ソラノート／リーダー",
+      "color": "E8833A"
+    },
+    {
+      "id": "B",
+      "short": "みお",
+      "name": "青井みお",
+      "role": "",
+      "unit": "ソラノート",
+      "color": "3A7BD5"
+    },
+    {
+      "id": "C",
+      "short": "つむぎ",
+      "name": "緑川つむぎ",
+      "role": "",
+      "unit": "ソラノート",
+      "color": "3BA55C"
+    }
+  ],
+  "songs": [
+    {
+      "id": "M1",
+      "title": "はじまりの合図",
+      "duration": "4:10",
+      "singers": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "id": "M2",
+      "title": "ソーダ色の午後",
+      "duration": "3:50",
+      "singers": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "id": "M3",
+      "title": "まっすぐな約束",
+      "duration": "4:30",
+      "singers": [
+        "A",
+        "B",
+        "C"
+      ]
+    }
+  ],
+  "rundown": [
+    {
+      "label": "影アナ",
+      "sub": "注意事項",
+      "duration": "2:00",
+      "summary": "袖マイクで注意事項",
+      "content": [
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "客電50%"
+        },
+        {
+          "type": "cue",
+          "dept": "PA",
+          "text": "BGM FO　→　袖マイクON（3名）"
+        },
+        {
+          "type": "line",
+          "who": "A",
+          "text": "みなさん、こんばんは！ソラノートのひかりです！"
+        },
+        {
+          "type": "line",
+          "who": "B",
+          "text": "みおです。開演前に、いくつかお願いがあります。"
+        },
+        {
+          "type": "line",
+          "who": "C",
+          "text": "撮影・録音はご遠慮ください。ペンライトは胸の高さでお願いします！"
+        },
+        {
+          "type": "line",
+          "who": "ALL",
+          "text": "それでは、もう少しだけお待ちください！"
+        },
+        {
+          "type": "cue",
+          "dept": "PA",
+          "text": "袖マイクOFF",
+          "trigger": "「お待ちください！」で"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "客電FO",
+          "trigger": "袖マイクOFF後"
+        }
+      ]
+    },
+    {
+      "label": "OP",
+      "sub": "SE",
+      "duration": "1:00",
+      "content": [
+        {
+          "type": "cue",
+          "dept": "PA",
+          "text": "SE「Overture」CI"
+        },
+        {
+          "type": "cue",
+          "dept": "VJ",
+          "text": "OPムービー再生（1:00）",
+          "trigger": "SE CIと同時"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "ステージ青・スモーク",
+          "trigger": "SE CI 8カウント後"
+        },
+        {
+          "type": "direction",
+          "text": "3名、上手から登場し定位置へ"
+        }
+      ]
+    },
+    {
+      "label": "M1",
+      "content": [
+        {
+          "type": "song",
+          "song": "M1",
+          "text": "イントロで客席あおり（ひかり）"
+        },
+        {
+          "type": "cue",
+          "dept": "VJ",
+          "text": "M1歌詞モーションをLED送出",
+          "trigger": "イントロ頭"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "M1用プリセット（暖色・サビでストロボ）",
+          "trigger": "イントロ頭"
+        }
+      ]
+    },
+    {
+      "label": "MC1",
+      "sub": "自己紹介",
+      "duration": "4:00",
+      "summary": "自己紹介・初ワンマンの気持ち",
+      "content": [
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "MC明かり（全体白）",
+          "trigger": "M1アウトロ終わり"
+        },
+        {
+          "type": "cue",
+          "dept": "VJ",
+          "text": "ロゴループ"
+        },
+        {
+          "type": "line",
+          "who": "A",
+          "text": "改めまして、ソラノートです！今日は来てくれてありがとう！"
+        },
+        {
+          "type": "line",
+          "who": "A",
+          "text": "ソラノートのリーダー、オレンジ担当の春野ひかりです！"
+        },
+        {
+          "type": "line",
+          "who": "B",
+          "text": "ブルー担当、青井みおです。今日はゆっくり楽しんでいってね。"
+        },
+        {
+          "type": "line",
+          "who": "C",
+          "text": "グリーン担当、緑川つむぎです！声、出していきましょう〜！"
+        },
+        {
+          "type": "topic",
+          "text": "トークテーマ：初ワンマンが決まったときの、それぞれの第一声"
+        },
+        {
+          "type": "line",
+          "who": "B",
+          "text": "次は、私とつむぎの2人で歌います。"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "暗転",
+          "trigger": "「2人で歌います。」で"
+        },
+        {
+          "type": "cue",
+          "dept": "舞台",
+          "text": "ひかり上手ハケ　→　センター立ち位置バミリ確認",
+          "trigger": "暗転中"
+        }
+      ]
+    },
+    {
+      "label": "M2",
+      "content": [
+        {
+          "type": "song",
+          "song": "M2"
+        },
+        {
+          "type": "cue",
+          "dept": "PA",
+          "text": "ひかりのマイクOFF（2人曲）",
+          "trigger": "M2頭"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "青系・2人ピンスポット",
+          "trigger": "M2頭"
+        }
+      ]
+    },
+    {
+      "label": "MC2",
+      "sub": "告知・ラスト曲前",
+      "duration": "3:00",
+      "content": [
+        {
+          "type": "cue",
+          "dept": "PA",
+          "text": "ひかりのマイクON",
+          "trigger": "再登場時"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "全体明るめ",
+          "trigger": "ひかり再登場"
+        },
+        {
+          "type": "line",
+          "who": "A",
+          "text": "ここで、みなさんにお知らせがあります！"
+        },
+        {
+          "type": "line",
+          "who": "A",
+          "text": "ソラノート、年末のカウントダウンイベントに出演が決まりました！"
+        },
+        {
+          "type": "note",
+          "text": "押している場合は告知のみで次曲へ"
+        },
+        {
+          "type": "line",
+          "who": "ALL",
+          "text": "最後の曲です。聴いてください。「まっすぐな約束」"
+        },
+        {
+          "type": "cue",
+          "dept": "VJ",
+          "text": "告知画像（年末イベント）を送出",
+          "trigger": "「出演が決まりました！」で"
+        }
+      ]
+    },
+    {
+      "label": "M3",
+      "content": [
+        {
+          "type": "song",
+          "song": "M3"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "M3プリセット（ラストサビで客席照らし）",
+          "trigger": "イントロ頭"
+        }
+      ]
+    },
+    {
+      "label": "ED",
+      "sub": "終演アナウンス",
+      "duration": "1:30",
+      "content": [
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "暗転",
+          "trigger": "M3アウトロ終わり"
+        },
+        {
+          "type": "cue",
+          "dept": "PA",
+          "text": "BGM CI　→　袖マイクON（ひかり）",
+          "trigger": "3名ハケ後"
+        },
+        {
+          "type": "line",
+          "who": "A",
+          "text": "本日はありがとうございました！お気をつけてお帰りください！"
+        },
+        {
+          "type": "cue",
+          "dept": "PA",
+          "text": "袖マイクOFF"
+        },
+        {
+          "type": "cue",
+          "dept": "照明",
+          "text": "客電UP",
+          "trigger": "袖マイクOFF後"
+        },
+        {
+          "type": "cue",
+          "dept": "VJ",
+          "text": "終演スライド送出",
+          "trigger": "客電UPと同時"
+        }
+      ]
+    }
+  ],
+  "prompter": [
+    {
+      "section": "影アナ",
+      "kind": "mc",
+      "cue": "袖マイクON",
+      "lines": [
+        {
+          "who": "A",
+          "text": "みなさん、こんばんは！"
+        },
+        {
+          "who": "A",
+          "text": "ソラノートのひかりです！"
+        },
+        {
+          "who": "B",
+          "text": "みおです。開演前に"
+        },
+        {
+          "who": "B",
+          "text": "いくつかお願いがあります。"
+        }
+      ]
+    },
+    {
+      "section": "影アナ",
+      "kind": "mc",
+      "lines": [
+        {
+          "who": "C",
+          "text": "撮影・録音はご遠慮ください。"
+        },
+        {
+          "who": "C",
+          "text": "ペンライトは"
+        },
+        {
+          "who": "C",
+          "text": "胸の高さでお願いします！"
+        },
+        {
+          "who": "ALL",
+          "text": "もう少しだけお待ちください！"
+        }
+      ]
+    },
+    {
+      "kind": "title",
+      "section": "M1",
+      "text": "はじまりの合図",
+      "sub": "歌唱：ひかり・みお・つむぎ　4:10"
+    },
+    {
+      "section": "M1 はじまりの合図",
+      "kind": "lyric",
+      "part": "1番 Aメロ",
+      "lines": [
+        {
+          "who": "A",
+          "text": "目覚ましより早く"
+        },
+        {
+          "who": "A",
+          "text": "胸が鳴った朝"
+        },
+        {
+          "who": "B",
+          "text": "カーテンの向こうで"
+        },
+        {
+          "who": "B",
+          "text": "空が手を振る"
+        }
+      ]
+    },
+    {
+      "section": "M1 はじまりの合図",
+      "kind": "lyric",
+      "part": "1番 サビ",
+      "lines": [
+        {
+          "who": "ALL",
+          "text": "さあ 合図を鳴らそう"
+        },
+        {
+          "who": "C",
+          "text": "まだ見ぬ明日へ"
+        },
+        {
+          "who": [
+            "A",
+            "B"
+          ],
+          "text": "迷っても 転んでも"
+        },
+        {
+          "who": "ALL",
+          "text": "ここから始まるんだ"
+        }
+      ]
+    },
+    {
+      "section": "MC1 自己紹介",
+      "kind": "mc",
+      "lines": [
+        {
+          "who": "A",
+          "text": "改めまして、ソラノートです！"
+        },
+        {
+          "who": "A",
+          "text": "今日は来てくれてありがとう！"
+        }
+      ]
+    },
+    {
+      "section": "MC1 自己紹介",
+      "kind": "mc",
+      "lines": [
+        {
+          "who": "A",
+          "text": "リーダー、オレンジ担当"
+        },
+        {
+          "who": "A",
+          "text": "春野ひかりです！"
+        },
+        {
+          "who": "B",
+          "text": "ブルー担当、青井みおです。"
+        },
+        {
+          "who": "C",
+          "text": "グリーン担当、緑川つむぎです！"
+        }
+      ]
+    },
+    {
+      "section": "MC1 自己紹介",
+      "kind": "mc",
+      "cue": "トークテーマ",
+      "lines": [
+        {
+          "text": "初ワンマンが決まったときの"
+        },
+        {
+          "text": "それぞれの第一声"
+        }
+      ]
+    },
+    {
+      "section": "MC1 自己紹介",
+      "kind": "mc",
+      "cue": "「2人で歌います。」で暗転",
+      "lines": [
+        {
+          "who": "B",
+          "text": "次は、私とつむぎの"
+        },
+        {
+          "who": "B",
+          "text": "2人で歌います。"
+        }
+      ]
+    },
+    {
+      "kind": "title",
+      "section": "M2",
+      "text": "ソーダ色の午後",
+      "sub": "歌唱：みお・つむぎ　3:50"
+    }
+  ]
+}
