@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>台本工房ガイド</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@900&family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: 左に目次（sticky）、右に本文。ツールと同じクラフト系のトークン */
+:root{
+  --paper:#f2efe9; --sheet:#fbfaf7; --ink:#141311; --sub:#6f6a62; --rule:#141311; --hair:#d6cfc2;
+  --kraft:#b8935f; --kraft-soft:#ece3d3; --note:#f4ead8;
+  --body:"Noto Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#171613; --sheet:#1f1d1a; --ink:#ece7dd; --sub:#a39c90; --rule:#ece7dd; --hair:#3a3631;
+  --kraft:#c9a876; --kraft-soft:#2e2820; --note:#2a241b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#171613; --sheet:#1f1d1a; --ink:#ece7dd; --sub:#a39c90; --rule:#ece7dd; --hair:#3a3631;
+  --kraft:#c9a876; --kraft-soft:#2e2820; --note:#2a241b; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.85}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:clamp(16px,3vw,40px);padding-block:0 72px}
+header.mast{border-bottom:2px solid var(--rule);padding-block:32px 18px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px}
+.mast h1{margin:0;font-weight:900;font-size:clamp(40px,7vw,84px);line-height:1;letter-spacing:.02em}
+.mast h1 span{color:var(--kraft)}
+.mast .lead{margin:14px 0 0;max-width:46ch;color:var(--ink)}
+.mast .meta{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.tag{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub)}
+.tool{display:inline-flex;align-items:center;gap:8px;border:2px solid var(--rule);background:var(--ink);color:var(--paper);font-weight:700;text-decoration:none;padding:9px 16px;border-radius:2px}
+.tool:hover{background:var(--paper);color:var(--ink)}
+.tool:focus-visible,a:focus-visible{outline:2px solid var(--kraft);outline-offset:2px}
+.layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px;margin-top:32px;align-items:start}
+@media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr);gap:20px}}
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 20px);border-top:2px solid var(--rule);padding-top:10px}
+@media (max-width:860px){nav.toc{position:static}}
+nav.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+@media (max-width:860px){nav.toc ol{flex-direction:row;flex-wrap:wrap;gap:4px 14px}}
+nav.toc a{display:flex;gap:10px;color:var(--ink);text-decoration:none;padding:5px 0;font-size:14px;font-weight:500}
+nav.toc a:hover{color:var(--kraft)}
+nav.toc .n{font-family:var(--mono);font-size:11px;color:var(--sub);padding-top:3px}
+main{min-width:0}
+section{border-top:2px solid var(--rule);padding-block:18px 40px;scroll-margin-top:16px}
+.sh{display:flex;align-items:baseline;gap:16px;margin-bottom:12px}
+.sh .num{font-weight:900;font-size:44px;line-height:1;color:var(--kraft);font-family:"Archivo",var(--body);letter-spacing:-.03em}
+.sh h2{margin:0;font-size:26px;font-weight:900;text-wrap:balance}
+h3{font-size:18px;font-weight:700;margin:28px 0 6px;padding-left:12px;border-left:4px solid var(--kraft);line-height:1.4}
+p{margin:0 0 12px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:1.3em;max-width:68ch}
+li{margin-bottom:4px}
+ol.steps{list-style:none;padding:0;counter-reset:s;display:flex;flex-direction:column;gap:8px}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:start;margin:0}
+ol.steps li::before{content:counter(s);font-family:var(--mono);font-weight:600;font-size:13px;width:28px;height:28px;display:grid;place-items:center;background:var(--ink);color:var(--paper);border-radius:2px;margin-top:2px}
+.tw{overflow-x:auto;margin:6px 0 16px;border:1.5px solid var(--rule);background:var(--sheet)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.6}
+th{background:var(--kraft-soft);text-align:left;font-weight:700;padding:8px 12px;border-bottom:1.5px solid var(--rule);white-space:nowrap}
+td{padding:8px 12px;border-top:1px solid var(--hair);vertical-align:top}
+td:first-child{font-weight:700;white-space:nowrap}
+@media (max-width:560px){td:first-child{white-space:normal}}
+pre.code{font-family:var(--mono);font-size:13.5px;line-height:1.75;background:var(--sheet);border:1.5px solid var(--rule);padding:12px 14px;margin:6px 0 14px;overflow-x:auto;white-space:pre}
+.note{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;background:var(--note);padding:12px 14px;margin:8px 0 16px;border-radius:2px}
+.note p{margin:0;font-size:14.5px}
+.flow{display:flex;flex-wrap:wrap;gap:0;margin:10px 0 6px;border:1.5px solid var(--rule)}
+.fs{flex:1 1 150px;display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-right:1px solid var(--hair);background:var(--sheet);position:relative;min-width:0}
+.fs:last-child{border-right:0;background:var(--kraft-soft)}
+.fn{font-family:var(--mono);font-size:11px;color:var(--sub);letter-spacing:.1em}
+.fs span:last-child{font-weight:700;font-size:15px;line-height:1.5}
+@media (max-width:640px){.mast .meta{align-items:flex-start}}
+footer{margin-top:24px;border-top:2px solid var(--rule);padding-top:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div class="wrap">
+<header class="mast">
+  <div><h1>台本工房<br><span>使い方ガイド</span></h1><p class="lead">公演の情報を入れて、AIに台本とプロンプターを作ってもらうまでの手順です。台本を作るスタッフ向けにまとめています。</p></div>
+  <div class="meta"><span class="tag">DAIHON KOBO / GUIDE / 2026年10月版</span><a class="tool" href="index.html">台本工房を開く →</a></div>
+</header>
+<div class="layout">
+<nav class="toc" aria-label="目次"><ol><li><a href="#s1"><span class="n">01</span><span>できること</span></a></li><li><a href="#s2"><span class="n">02</span><span>はじめる前に</span></a></li><li><a href="#s3"><span class="n">03</span><span>基本の流れ</span></a></li><li><a href="#s4"><span class="n">04</span><span>書き方のコツ</span></a></li><li><a href="#s5"><span class="n">05</span><span>ライブラリ（2回目から楽にする）</span></a></li><li><a href="#s6"><span class="n">06</span><span>できあがるもの</span></a></li><li><a href="#s7"><span class="n">07</span><span>困ったとき</span></a></li><li><a href="#s8"><span class="n">08</span><span>AIに渡す前のチェック</span></a></li></ol></nav>
+<main><section id="s1"><div class="sh"><span class="num">01</span><h2>できること</h2></div><p>台本工房は、AIに渡す「依頼書」を作るツールです。依頼書には台本の作り方のルール（仕様書）と、今回の公演の情報がまとめて入ります。AIはそれを読んで、次の2つを作ります。</p><div class="tw"><table><thead><tr><th>できあがるもの</th><th>形式</th><th>使い道</th></tr></thead><tbody><tr><td>進行台本</td><td>Word（.docx）</td><td>事前の読み合わせ、本番中の進行、各部署への指示</td></tr><tr><td>プロンプター</td><td>PowerPoint（.pptx）</td><td>本番中、ステージ足元のモニターに映して演者が読む</td></tr></tbody></table></div><div class="flow"><div class="fs"><span class="fn">01</span><span>台本工房に入力</span></div><div class="fs"><span class="fn">02</span><span>依頼書（.md）を書き出す</span></div><div class="fs"><span class="fn">03</span><span>AIに渡す</span></div><div class="fs"><span class="fn">04</span><span>たたき台を確認</span></div><div class="fs"><span class="fn">05</span><span>Word・PPTXが届く</span></div></div></section><section id="s2"><div class="sh"><span class="num">02</span><h2>はじめる前に</h2></div><h3>使うAI</h3><p>依頼書はClaude・ChatGPT・Geminiなど、どのAIにも渡せます。ただし最後のWordとPPTXの書き出しには、AIがプログラムを動かせる必要があります。ClaudeやChatGPTなら、そのまま書き出しまで進められます。</p><aside class="note"><span class="tag">NOTE</span><p>プログラムを動かせないAIの場合は、AIが途中のデータ（JSON）まで作って案内してくれます。そのデータを、書き出しができるAIに渡してください。</p></aside><h3>AIのプロジェクトを用意する（おすすめ）</h3><p>AIの「プロジェクト」機能に、次の2つのファイルを入れておくと、毎回の依頼が短くなります。</p><ul><li>台本プロンプター作成仕様書.md（台本の作り方のルール）</li><li>daihon_library.md（登録した曲・キャスト。作り方は「ライブラリ」の章を参照）</li></ul><p>プロジェクトに仕様書を入れた場合は、書き出すときに「公演データのみ」を選べます。</p></section><section id="s3"><div class="sh"><span class="num">03</span><h2>基本の流れ</h2></div><p>ツールの画面は、左が入力欄（00〜05）、右が書き出し欄です。上から順に埋めていきます。右側に抜けている項目が赤い印で出るので、それがなくなれば準備完了です。</p><h3>00　ライブラリ</h3><p>登録済みのグループや曲があれば、ここから呼び出します。「キャストを呼び出す」でグループを選ぶとキャストと色が入ります。「曲を追加」で曲名を選ぶと、尺・歌唱メンバー・歌詞が入り、セットリストの最後にも追加されます。</p><h3>01　公演情報・趣旨</h3><p>公演名・日時・会場・開場／開演を入れます。開演は「18:00」の形で入れてください。セットリストの開始時刻と終演予定は、ここから自動で計算されます。趣旨には、この公演で伝えたいことやゴールを書きます。AIがMCの方向性を決める手がかりになります。</p><h3>02　キャスト・色分け</h3><ul><li>表記：台本とプロンプターに出る名前（役名や愛称など、現場で呼ぶ名前）</li><li>色：台本の名前の背景と、プロンプターの文字の色になります。プロンプターでは名前を出さず色だけで人を見分けるので、似た色が並ばないようにしてください</li></ul><h3>03　楽曲・時間・歌詞</h3><p>曲名・尺（例 4:10）を入れ、歌唱メンバーをボタンで選びます。歌詞は「歌詞」を開いて貼り付けます。書き方は次の章の「歌詞の書き方」を見てください。</p><h3>04　セットリスト・時間</h3><p>上から本番の順番で並べます。区分に「M1」のように曲番号を入れると、その曲の尺が自動で入ります。MCや影アナなどは尺を入れます。「↑」で順番を入れ替えられます。</p><p>各行の「CUE」を押すと、その行のPA・VJ・照明・舞台への指示を書けます。書き方は次の章の「キューの書き方」を見てください。</p><h3>05　MC・演出・備考</h3><ul><li>MCで話す内容：自己紹介、告知、トークテーマなど。決まっていることだけでよい</li><li>全体の演出メモ：行ごとではない演出の方針</li><li>備考：NG表現、押したときのカット候補、キャラクターの口調など。1行に1つ</li><li>台本に独立した欄を作る部署：初期設定は照明。PA・VJ・舞台も選べる（3つまで）</li></ul><h3>書き出してAIに渡す</h3><ol class="steps"><li><span>右上で「仕様書＋公演データ」か「公演データのみ」を選ぶ（AIのプロジェクトに仕様書が入っていれば「公演データのみ」でよい）</span></li><li><span>「コピー」でAIのチャットに貼る。または「.mdで保存」してファイルとして渡す</span></li><li><span>AIが台本のたたき台を表で見せてくるので、内容・時間・キューを確認して直してほしい所を伝える</span></li><li><span>OKを出すと、Wordの台本とPPTXのプロンプターが届く</span></li><li><span>新しい曲や変更があれば、AIがライブラリの更新データを出してくるので保存する</span></li></ol></section><section id="s4"><div class="sh"><span class="num">04</span><h2>書き方のコツ</h2></div><h3>歌詞の書き方</h3><p>1行に1フレーズ。行の頭に「名前：」で歌う人を書きます。[ ] で囲んだ見出しを入れると、プロンプターがその単位でページ分けされます。</p><pre class="code">[1番Aメロ]
+ひかり：目覚ましより早く　胸が鳴った朝
+みお：カーテンの向こうで　空が手を振る
+[1番サビ]
+全員：さあ 合図を鳴らそう
+ひかり・みお：迷っても 転んでも</pre><ul><li>全員で歌う所は「全員：」</li><li>2人以上は「ひかり・みお：」のように「・」でつなぐ</li><li>名前はキャストの「表記」と同じにする（違うと右側に警告が出ます）</li><li>歌詞は書いたとおりに使われます。AIが書き換えることはありません</li></ul><h3>キューの書き方</h3><p>1行に1つの指示。きっかけ（いつ動くか）を先に書き、スペースを空けて指示を書くと、台本の「キッカケ」と「指示内容」に分かれて入ります。ブロックの頭で動くものは、指示だけでかまいません。</p><pre class="code">「2人で歌います。」で 暗転
+M1アウトロ終わり BGM CI
+SE CI 8カウント後 ステージ青・スモーク
+客電FO</pre><p>きっかけとして認識される終わり方：「〜で」「〜後」「〜と同時」「〜時」「〜頭」「〜終わり」</p><h3>時間の書き方</h3><p>尺は「4:10」（4分10秒）の形がおすすめです。「4分」「90秒」「1分30秒」でも計算されます。</p></section><section id="s5"><div class="sh"><span class="num">05</span><h2>ライブラリ（2回目から楽にする）</h2></div><p>一度使った曲とキャストを登録しておくと、次からは選ぶだけで入力が済みます。さらにAI側にも同じ内容を保存しておくと、依頼書から歌詞を省けるので、短い依頼で済みます。</p><h3>はじめて登録する</h3><ol class="steps"><li><span>いつもどおり、キャストと曲（歌詞も）を入力する</span></li><li><span>00欄の「今の入力をライブラリに登録」を押し、グループ名を入れて「登録する」</span></li><li><span>「ライブラリを書き出す」→「コピー」または保存</span></li><li><span>AIのプロジェクトに daihon_library.md として入れる</span></li></ol><h3>AIごとの保存先</h3><div class="tw"><table><thead><tr><th>AI</th><th>保存先</th></tr></thead><tbody><tr><td>Claude</td><td>プロジェクトのファイル</td></tr><tr><td>ChatGPT</td><td>プロジェクトのファイル（メモリー機能は小さく歌詞が入らないため）</td></tr><tr><td>Gemini</td><td>Gem の「知識」</td></tr><tr><td>上記がない</td><td>依頼のたびにライブラリのファイルも一緒に渡す</td></tr></tbody></table></div><h3>更新する</h3><p>AIが台本を作り終えたとき、新しい曲や尺の変更があれば「ライブラリの更新データ」を出してきます。それを00欄の「読み込み・AIの更新データを取り込む」に貼ると、ツール側にも反映されます。そのあと「ライブラリを書き出す」で、AI側のファイルも新しいものに差し替えてください。</p><aside class="note"><span class="tag">NOTE</span><p>ツールに入力した内容とライブラリは、使っているブラウザの中にだけ保存されます。別のパソコンや別のブラウザでは見えません。大事なライブラリは書き出して保管しておいてください。</p></aside></section><section id="s6"><div class="sh"><span class="num">06</span><h2>できあがるもの</h2></div><h3>Wordの台本</h3><div class="tw"><table><thead><tr><th>ページ</th><th>内容</th></tr></thead><tbody><tr><td>表紙</td><td>公演情報・趣旨・備考・キャストと色</td></tr><tr><td>タイムテーブル</td><td>開始時刻・区分・尺・歌唱メンバーの一覧。曲の行は黄色</td></tr><tr><td>進行台本</td><td>時間／セットリスト／内容＋部署欄（初期設定は照明）。キューには PA-01・L-01 のような番号が付く</td></tr><tr><td>部署別キューシート</td><td>PA・VJ・照明・舞台ごとに1ページ。そのページだけ各部署に渡せる</td></tr><tr><td>歌詞パート割</td><td>プロンプターと同じ区切りの歌詞一覧。演者の確認用</td></tr></tbody></table></div><h3>PowerPointのプロンプター</h3><ul><li>黒い背景に、歌詞とMCのセリフだけを大きく表示</li><li>誰が話す・歌うかは文字の色で見分ける（全員・複数人は白）</li><li>1枚目は色と名前の対応表（本番前の確認用。不要なら削除）</li><li>区分やキッカケは発表者ノートに入っている</li><li>現場で直すときは、文字を打ち替えるだけ。行末で改行すれば同じ色・大きさが続く</li></ul></section><section id="s7"><div class="sh"><span class="num">07</span><h2>困ったとき</h2></div><div class="tw"><table><thead><tr><th>こんなとき</th><th>どうする</th></tr></thead><tbody><tr><td>AIがWordやPPTXを出してくれない</td><td>「仕様書7章の手順で書き出して」と頼む。それでも無理なら、書き出しのできるAI（Claude・ChatGPT）にJSONを渡す</td></tr><tr><td>「長い行」「文字が多すぎます」と警告が出た</td><td>AIに「警告の出たスライドを分けて」と頼む。1枚4行・1行16文字が目安</td></tr><tr><td>プロンプターで人の色が見分けにくい</td><td>02欄で色を変えて、もう一度書き出す。明るさの近い色を並べないのがコツ</td></tr><tr><td>曲を選んでも歌詞が入らない</td><td>ライブラリにその曲の歌詞が登録されていない。歌詞を入れて「今の入力をライブラリに登録」</td></tr><tr><td>入力した内容が消えた</td><td>別のブラウザやシークレットウィンドウで開いていないか確認。ブラウザのデータを消すと入力も消える</td></tr><tr><td>Wordで漢字の形がおかしい（中国語の字形）</td><td>書き出しプログラムは全文を日本語指定にしている。自分で書き足した部分は、文字を選んで言語を「日本語」にする</td></tr><tr><td>キューが台本の変な位置に入った</td><td>たたき台の段階で「L-03はMC1の最後に移して」のように番号で伝える</td></tr></tbody></table></div></section><section id="s8"><div class="sh"><span class="num">08</span><h2>AIに渡す前のチェック</h2></div><ul><li>右側の確認事項（赤い印）がなくなっている</li><li>終演予定の時刻が想定どおり</li><li>曲ごとに歌唱メンバーと歌詞が入っている（またはライブラリ参照になっている）</li><li>キャストの色が見分けやすい</li><li>途中で動くキューには、きっかけが書いてある</li></ul></section></main>
+</div>
+<footer><span class="tag">© ISUMI · 台本工房</span><span class="tag">2026年10月版</span></footer>
+</div>
+</body>
+</html>
